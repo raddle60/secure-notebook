@@ -1,0 +1,75 @@
+/* CodeMirror 亮色主题 */
+:root[data-theme='light'] .cm-editor {
+  color: #333333;
+}
+
+:root[data-theme='light'] .cm-scroller {
+  background: #ffffff;
+}
+
+:root[data-theme='light'] .cm-gutters {
+  background: #f5f5f5;
+  color: #666666;
+  border-right: 1px solid #e0e0e0;
+}
+
+:root[data-theme='light'] .cm-lineNumbers {
+  color: #999999;
+}
+
+:root[data-theme='light'] .cm-activeLine {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+:root[data-theme='light'] .cm-activeLineGutter {
+  background: #e8e8e8;
+}
+
+:root[data-theme='light'] .cm-cursor {
+  border-left-color: #333333;
+}
+
+:root[data-theme='light'] .cm-selectionBackground {
+  background: rgba(74, 144, 217, 0.2) !important;
+}
+
+:root[data-theme='light'] .cm-focused .cm-selectionBackground {
+  background: rgba(74, 144, 217, 0.3) !important;
+}
+
+:root[data-theme='light'] .cm-matchingBracket {
+  background: rgba(74, 144, 217, 0.15);
+}
+
+:root[data-theme='light'] .cm-searchMatch {
+  background: rgba(250, 173, 14, 0.3);
+}
+
+:root[data-theme='light'] .cm-textfield {
+  outline: none;
+}
+
+:root[data-theme='light'] .cm-textfield:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.15);
+}
+
+:root[data-theme='light'] .cm-button {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+:root[data-theme='light'] .cm-button:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-color);
+}
+
+:root[data-theme='light'] .cm-searchPanel {
+  background: var(--bg-primary);
+  gap: 8px;
+}

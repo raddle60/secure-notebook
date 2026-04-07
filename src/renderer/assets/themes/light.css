@@ -1,0 +1,69 @@
+/* 亮色主题 */
+:root[data-theme='light'] {
+  /* 背景色 */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-hover: #e8e8e8;
+  --bg-selected: #d0d0d0; /* 选中背景 - 更深 */
+  --hover-bg: var(--bg-hover); /* 别名 */
+  --bg-elevated: #ffffff;
+
+  /* 文本色 */
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-disabled: #999999;
+  --text-inverse: #ffffff;
+
+  /* 边框色 */
+  --border-color: #e0e0e0;
+  --border-focus: #4a90d9;
+
+  /* 主题色 */
+  --accent-color: #4a90d9;
+  --accent-hover: #3a7bc8;
+  --accent-light: rgba(74, 144, 217, 0.1);
+
+  /* 拖拽高亮色 - 亮色主题下使用蓝色 */
+  --drag-over-border-color: #4a90d9;
+  --drag-over-bg-color: rgba(74, 144, 217, 0.2);
+
+  /* 功能色 */
+  --danger-color: #d94a4a;
+  --danger-hover: #c03939;
+  --success-color: #52c41a;
+  --warning-color: #faad14;
+
+  /* 编辑器相关 */
+  --editor-gutter-bg: #f5f5f5;
+  --editor-line-highlight: rgba(0, 0, 0, 0.05);
+  --editor-active-line: rgba(0, 0, 0, 0.05);
+  --editor-selection: rgba(74, 144, 217, 0.2);
+  --editor-cursor: #333333;
+
+  /* 代码块背景 */
+  --code-bg: #f6f8fa;
+  --code-border: #e0e0e0;
+
+  /* 工具栏按钮选中状态 */
+  --toolbar-active-bg: #4a90d9;
+  --toolbar-active-color: #ffffff;
+
+  /* 语法高亮 */
+  --syntax-keyword: #d73a49;
+  --syntax-operator: #d73a49;
+  --syntax-string: #032f62;
+  --syntax-comment: #6a737d;
+  --syntax-number: #005cc5;
+  --syntax-constant: #005cc5;
+  --syntax-function: #6f42c1;
+  --syntax-class: #22863a;
+  --syntax-type: #22863a;
+
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+
+  /* 对话框遮罩 */
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+}

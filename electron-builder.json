@@ -1,0 +1,22 @@
+{
+  "appId": "com.securenotebook.app",
+  "productName": "Secure Notebook",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist/**/*",
+    "dist-electron/**/*"
+  ],
+  "extraResources": [
+    {
+      "from": "node_modules/better-sqlite3/build/Release/",
+      "to": "native",
+      "filter": ["*.node"]
+    }
+  ],
+  "asar": true,
+  "asarUnpack": [
+    "node_modules/better-sqlite3/**/*"
+  ]
+}

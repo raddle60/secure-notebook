@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "WebFetch(domain:tiptap.dev)",
+      "WebSearch",
+      "Bash(timeout 120 bash -c 'while [ ! -f \"release/win-unpacked/resources/app/package.json\" ]; do sleep 2; done; echo \"Build completed\"')",
+      "Bash(timeout 60 bash:*)",
+      "Bash(npm install:*)",
+      "Bash(sed:*)",
+      "Bash(npm list:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm info:*)",
+      "Bash(npm search:*)",
+      "Bash(git checkout:*)",
+      "Bash(node:*)",
+      "Bash(tee /tmp/electron-dev.log)",
+      "Read(//tmp/**)",
+      "Bash(grep -r \"overflow\" src/renderer/components/FolderTree.vue src/renderer/components/*.vue)",
+      "Bash(asar list:*)",
+      "Bash(cmd:*)",
+      "Bash(npx asar:*)",
+      "Bash(ls -la node_modules/argon2/build/Release/*.node)",
+      "Bash(npm start:*)"
+    ]
+  }
+}

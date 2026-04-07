@@ -1,0 +1,47 @@
+/* 主题导入文件 */
+@import './light.css';
+@import './dark.css';
+@import './codemirror-light.css';
+@import './codemirror-dark.css';
+
+/* 默认主题变量（亮色，作为 fallback） */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-hover: #e8e8e8;
+  --bg-selected: #d0d0d0;
+  --hover-bg: var(--bg-hover); /* 别名 */
+  --bg-elevated: #ffffff;
+
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-disabled: #999999;
+  --text-inverse: #ffffff;
+
+  --border-color: #e0e0e0;
+  --border-focus: #4a90d9;
+
+  --accent-color: #4a90d9;
+  --accent-hover: #3a7bc8;
+  --accent-light: rgba(74, 144, 217, 0.1);
+
+  --danger-color: #d94a4a;
+  --danger-hover: #c03939;
+  --success-color: #52c41a;
+  --warning-color: #faad14;
+
+  --editor-gutter-bg: #f5f5f5;
+  --editor-line-highlight: rgba(0, 0, 0, 0.05);
+  --editor-active-line: rgba(0, 0, 0, 0.05);
+  --editor-selection: rgba(74, 144, 217, 0.2);
+  --editor-cursor: #333333;
+
+  --code-bg: #f6f8fa;
+  --code-border: #e0e0e0;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+}

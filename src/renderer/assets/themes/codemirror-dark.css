@@ -1,0 +1,75 @@
+/* CodeMirror 暗色主题 */
+:root[data-theme='dark'] .cm-editor {
+  color: #cccccc;
+}
+
+:root[data-theme='dark'] .cm-scroller {
+  background: #1e1e1e;
+}
+
+:root[data-theme='dark'] .cm-gutters {
+  background: #252526;
+  color: #666666;
+  border-right: 1px solid #3c3c3c;
+}
+
+:root[data-theme='dark'] .cm-lineNumbers {
+  color: #555555;
+}
+
+:root[data-theme='dark'] .cm-activeLine {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme='dark'] .cm-activeLineGutter {
+  background: #2d2d30;
+}
+
+:root[data-theme='dark'] .cm-cursor {
+  border-left-color: #cccccc;
+}
+
+:root[data-theme='dark'] .cm-selectionBackground {
+  background: rgba(74, 144, 217, 0.3) !important;
+}
+
+:root[data-theme='dark'] .cm-focused .cm-selectionBackground {
+  background: rgba(74, 144, 217, 0.4) !important;
+}
+
+:root[data-theme='dark'] .cm-matchingBracket {
+  background: rgba(74, 144, 217, 0.2);
+}
+
+:root[data-theme='dark'] .cm-searchMatch {
+  background: rgba(255, 152, 0, 0.3);
+}
+
+:root[data-theme='dark'] .cm-textfield {
+  outline: none;
+}
+
+:root[data-theme='dark'] .cm-textfield:focus {
+  border-color: var(--bg-selected);
+  box-shadow: 0 0 0 2px rgba(161, 161, 161, 0.4);
+}
+
+:root[data-theme='dark'] .cm-button {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+:root[data-theme='dark'] .cm-button:hover {
+  background: var(--bg-hover);
+  border-color: var(--bg-selected);
+}
+
+:root[data-theme='dark'] .cm-searchPanel {
+  background: var(--bg-primary);
+  gap: 8px;
+}
