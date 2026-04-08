@@ -3,7 +3,7 @@ import fs from 'fs'
 import { app } from 'electron'
 
 // 常量：密钥格式版本和数据格式版本
-export const KEY_FORMAT_VERSION = 1
+export const KEY_FORMAT_VERSION = 2
 export const DATA_FORMAT_VERSION = 1
 
 export interface Folder {
@@ -71,10 +71,10 @@ export class DatabaseService {
 
       // 检查版本兼容性
       if (this.db.key_format_version !== undefined && this.db.key_format_version !== KEY_FORMAT_VERSION) {
-        throw new Error(`密钥格式版本不兼容：当前应用支持版本 ${KEY_FORMAT_VERSION}，但保险库版本为 ${this.db.key_format_version}`)
+        throw new Error(`密钥格式版本不兼容：当前应用支持版本 ${KEY_FORMAT_VERSION}，但数据目录版本为 ${this.db.key_format_version}`)
       }
       if (this.db.data_format_version !== undefined && this.db.data_format_version !== DATA_FORMAT_VERSION) {
-        throw new Error(`数据格式版本不兼容：当前应用支持版本 ${DATA_FORMAT_VERSION}，但保险库版本为 ${this.db.data_format_version}`)
+        throw new Error(`数据格式版本不兼容：当前应用支持版本 ${DATA_FORMAT_VERSION}，但数据目录版本为 ${this.db.data_format_version}`)
       }
     } else {
       this.db = { folders: [], notes: [], attachments: [] }

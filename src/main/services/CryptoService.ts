@@ -5,7 +5,7 @@ import { app } from 'electron'
 import argon2 from 'argon2'
 
 // 常量：密钥格式版本和数据格式版本
-export const KEY_FORMAT_VERSION = 1
+export const KEY_FORMAT_VERSION = 2
 export const DATA_FORMAT_VERSION = 1
 
 const ALGORITHM_GCM = 'aes-256-gcm'
@@ -140,10 +140,10 @@ export class CryptoService {
     const salt = crypto.randomBytes(SALT_LENGTH)
     const iv = crypto.randomBytes(IV_LENGTH)
     const derivedKey = await this.deriveKey(password, salt)
-    const hash = await this.computeSlowHash(derivedKey, salt)
+    const testVector = await this.computeTestVector(derivedKey, salt)
 
     const cipher = crypto.createCipheriv(ALGORITHM_GCM, derivedKey, iv)
-    const encryptedHash = Buffer.concat([cipher.update(hash), cipher.final()])
+    const encryptedHash = Buffer.concat([cipher.update(testVector), cipher.final()])
     const tag = cipher.getAuthTag()
 
     // 用 derivedKey 加密 derivedKey 本身（用于后续密码修改）
@@ -189,9 +189,9 @@ export class CryptoService {
     decipher.setAuthTag(tag)
     const decryptedHash = Buffer.concat([decipher.update(encryptedHash), decipher.final()])
 
-    const computedHash = await this.computeSlowHash(derivedKey, salt)
+    const testVector = await this.computeTestVector(derivedKey, salt)
 
-    const isValid = decryptedHash.equals(computedHash)
+    const isValid = decryptedHash.equals(testVector)
     if (isValid) {
       // 解密 encrypted_masterKey 并设置为 masterKey
       const keyDecipher = crypto.createDecipheriv(ALGORITHM_GCM, derivedKey, ivKey)
@@ -269,9 +269,25 @@ export class CryptoService {
     })
   }
 
-  private async computeSlowHash(derivedKey: Buffer, salt: Buffer): Promise<Buffer> {
-    // Argon2id 已经是慢速 KDF，直接使用 derivedKey 作为验证哈希
-    return derivedKey
+  /**
+   * 计算测试向量哈希值，用于密码验证
+   * 使用 SHA-256 对 derivedKey 和 salt 进行 10 万次迭代哈希，生成固定值用于比对校验
+   */
+  private async computeTestVector(derivedKey: Buffer, salt: Buffer): Promise<Buffer> {
+    // SHA-256(K' + Salt, 100000 次迭代)
+    let hash = crypto.createHash('sha256')
+    hash.update(derivedKey)
+    hash.update(salt)
+    let result = hash.digest()
+
+    // 重复 99999 次，总共 100000 次
+    for (let i = 1; i < 100000; i++) {
+      hash = crypto.createHash('sha256')
+      hash.update(result)
+      result = hash.digest()
+    }
+
+    return result
   }
 
   vaultExists(): boolean {
@@ -305,12 +321,12 @@ export class CryptoService {
 
     // 用新密码派生新密钥
     const newDerivedKey = await this.deriveKey(newPassword, salt)
-    const newHash = await this.computeSlowHash(newDerivedKey, salt)
+    const newTestVector = await this.computeTestVector(newDerivedKey, salt)
 
     // 生成新的 iv 和 tag 用于加密 hash（密码验证用）
     const newIv = crypto.randomBytes(IV_LENGTH)
     const newCipher = crypto.createCipheriv(ALGORITHM_GCM, newDerivedKey, newIv)
-    const newEncryptedHash = Buffer.concat([newCipher.update(newHash), newCipher.final()])
+    const newEncryptedHash = Buffer.concat([newCipher.update(newTestVector), newCipher.final()])
     const newTag = newCipher.getAuthTag()
 
     // 用新 derivedKey 加密原始 masterKey

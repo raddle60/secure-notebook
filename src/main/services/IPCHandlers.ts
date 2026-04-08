@@ -76,15 +76,17 @@ export function registerIPCHandlers(): void {
       vaultService.setVaultPath(dirPath)
       databaseService.setVaultPath(dirPath)
 
+      // 初始化服务（这里会检查版本兼容性）
+      databaseService.initialize()
       // 解锁金库
       const valid = await cryptoService.unlock(password)
       if (!valid) {
         return { success: false, error: '密码错误' }
       }
 
-      // 初始化服务（这里会检查版本兼容性）
+      // 初始化服务（这里会创建目录）
       vaultService.initialize()
-      databaseService.initialize()
+      
 
       // 保存到设置
       settingsService.setLastOpenedDir(dirPath)

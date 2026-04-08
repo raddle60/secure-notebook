@@ -12,7 +12,7 @@
 - 应用退出、锁定或崩溃时，主密钥由 Node.js 内存管理自动清除（不依赖显式清零）
 
 # 验证和解密过程
-- **vault.salt**：Salt（前 16 字节）+ IV（前 16 字节）+ test_vector 密文（32 字节）
+- **vault.salt**：salt (16) + ... + test_vector (32) + ... + encrypted_masterKey (32) = 共144
   - Salt：128 位随机 Salt，首次创建主密码时随机生成
   - IV：128 位随机 IV，用于 AES-256-GCM 加密 test_vector
   - test_vector：SHA-256_hash（派生 AES-256 主密钥 + Salt，用 AES-256-GCM 加密

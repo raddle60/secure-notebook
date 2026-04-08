@@ -15,7 +15,7 @@ const api = {
     isUnlocked: () => ipcRenderer.invoke('vault:isUnlocked'),
     checkLock: () => ipcRenderer.invoke('vault:checkLock'),
     changePassword: (oldPassword: string, newPassword: string) => ipcRenderer.invoke('vault:changePassword', oldPassword, newPassword),
-    KEY_FORMAT_VERSION: 1,
+    KEY_FORMAT_VERSION: 2,
     DATA_FORMAT_VERSION: 1
   },
   folders: {
