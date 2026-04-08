@@ -188,28 +188,70 @@ export function useVault() {
     }
   }
 
+  // 清空当前状态（用于切换目录时）
+  function clearState() {
+    folders.value = []
+    notes.value = []
+    currentFolderId.value = null
+    currentNoteId.value = null
+    currentNote.value = null
+    expandedFolderIds.value.clear()
+  }
+
   async function unlock(password: string): Promise<boolean> {
+    // 获取当前目录，用于判断是否切换了目录
+    const oldDir = await api.vault.getCurrentDir().catch(() => '')
+
     const result = await api.vault.unlock(password)
     if (result.success) {
       isUnlocked.value = true
+      // 获取新目录
+      const newDir = await api.vault.getCurrentDir()
+
+      // 只有目录变化时才清空状态
+      if (oldDir && newDir !== oldDir) {
+        clearState()
+      }
+
+      // 加载新目录数据
       await loadFolders()
       // 解锁成功后，恢复上一次打开的笔记
       await restoreLastOpenedNote()
       // 设置窗口标题为当前目录
       updateWindowTitle()
+      // 触发刷新事件，更新回收站等组件
+      emitRecycleBinRefresh()
+      emitNavigationRefresh()
+      emitAttachmentRefresh()
     }
     return result.success
   }
 
   async function openVault(dirPath: string, password: string): Promise<{ success: boolean; error?: string }> {
+    // 获取当前目录，用于判断是否切换了目录
+    const oldDir = await api.vault.getCurrentDir().catch(() => '')
+
     const result = await api.vault.open(dirPath, password)
     if (result.success) {
       isUnlocked.value = true
+      // 获取新目录
+      const newDir = await api.vault.getCurrentDir()
+
+      // 只有目录变化时才清空状态
+      if (oldDir && newDir !== oldDir) {
+        clearState()
+      }
+
+      // 加载新目录数据
       await loadFolders()
       // 等待 folders 加载完成后再恢复上一次打开的笔记
       await restoreLastOpenedNote()
       // 设置窗口标题为当前目录
       updateWindowTitle()
+      // 触发刷新事件，更新回收站等组件
+      emitRecycleBinRefresh()
+      emitNavigationRefresh()
+      emitAttachmentRefresh()
     }
     return result
   }
@@ -240,12 +282,28 @@ export function useVault() {
   }
 
   async function createVault(dirPath: string, password: string): Promise<{ success: boolean; error?: string }> {
+    // 获取当前目录，用于判断是否切换了目录
+    const oldDir = await api.vault.getCurrentDir().catch(() => '')
+
     const result = await api.vault.create(dirPath, password)
     if (result.success) {
       isUnlocked.value = true
+      // 获取新目录
+      const newDir = await api.vault.getCurrentDir()
+
+      // 只有目录变化时才清空状态
+      if (oldDir && newDir !== oldDir) {
+        clearState()
+      }
+
+      // 加载新目录数据
       await loadFolders()
       // 设置窗口标题为当前目录
       updateWindowTitle()
+      // 触发刷新事件，更新回收站等组件
+      emitRecycleBinRefresh()
+      emitNavigationRefresh()
+      emitAttachmentRefresh()
     }
     return result
   }

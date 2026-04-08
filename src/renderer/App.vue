@@ -43,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useVault } from './composables/useVault'
 import { useAutoLock } from './composables/useAutoLock'
 import UnlockScreen from './components/UnlockScreen.vue'
@@ -70,6 +70,13 @@ async function updateCurrentVaultDir() {
     currentVaultDir.value = ''
   }
 }
+
+// 监听解锁状态，当解锁成功后更新当前目录
+watch(isUnlocked, async (unlocked) => {
+  if (unlocked) {
+    await updateCurrentVaultDir()
+  }
+})
 
 // 自动锁定
 const { autoLockMinutes, updateAutoLockMinutes } = useAutoLock(() => {
@@ -276,9 +283,9 @@ onMounted(() => {
 
 async function handleLock() {
   await lock()
-  // 锁定后清空目录，这样下次解锁时如果是不同目录，会重新创建组件
-  currentVaultDir.value = ''
-  // 解锁时会由 useVault 中的 unlock/openVault 方法更新 currentVaultDir
+  // 锁定后不需要清空目录，保持 currentVaultDir 为当前目录
+  // 这样同目录锁定时，key 不变，组件不会重建
+  // 只有当用户在解锁页面切换到不同目录并解锁成功后，currentVaultDir 才会变化
 }
 </script>
 
