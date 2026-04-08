@@ -5,6 +5,9 @@
       v-model="showUrlDialog"
       :note-id="noteId"
       link-type="url"
+      :is-edit-mode="isLinkEditMode"
+      :edit-link-text="editLinkText"
+      :edit-link-href="editLinkHref"
       @url-confirm="handleUrlConfirm"
     />
     <!-- 附件链接对话框 -->
@@ -715,6 +718,11 @@ const pendingLinkText = ref('')
 const editorFontFamily = ref('Consolas, "Courier New", monospace')
 const editorFontSize = ref(14)
 
+// 编辑链接模式相关
+const isLinkEditMode = ref(false)
+const editLinkText = ref('')
+const editLinkHref = ref('')
+
 // 格式刷相关状态
 const isFormatBrushActive = ref(false)
 const copiedFormat = ref<Partial<{
@@ -1076,6 +1084,51 @@ const editor = useEditor({
 function setLink() {
   if (!editor.value) return
 
+  // 检查光标是否在 link 上
+  const { $node } = editor.value.state.selection
+  let currentLink = null
+  let linkFrom = 0
+  let linkTo = 0
+
+  // 检查当前节点或其父节点是否是链接
+  editor.value.state.doc.nodesBetween(editor.value.state.selection.from, editor.value.state.selection.to, (node, pos) => {
+    if (node.marks.some(mark => mark.type.name === 'link')) {
+      const linkMark = node.marks.find(mark => mark.type.name === 'link')
+      if (linkMark) {
+        currentLink = linkMark.attrs.href
+        linkFrom = pos
+        linkTo = pos + node.nodeSize
+      }
+    }
+  })
+
+  // 如果没有选中范围，检查光标所在位置的 mark
+  if (!currentLink && editor.value.state.selection.from === editor.value.state.selection.to) {
+    const { $from } = editor.value.state.selection
+    const marks = $from.marks()
+    const linkMark = marks.find(mark => mark.type.name === 'link')
+    if (linkMark) {
+      currentLink = linkMark.attrs.href
+      // 获取链接的完整范围
+      const nodeRange = $from.nodeBefore?.nodeSize || 0
+      linkFrom = $from.pos - $from.textOffset
+      linkTo = linkFrom + ($from.parent.text?.length || 0)
+    }
+  }
+
+  if (currentLink) {
+    // 光标在链接上，进入编辑模式
+    isLinkEditMode.value = true
+    // 获取链接文本
+    const linkText = editor.value.state.doc.textBetween(linkFrom, linkTo)
+    editLinkText.value = linkText
+    editLinkHref.value = currentLink
+    // 选中整个链接
+    editor.value.chain().focus().setTextSelection({ from: linkFrom, to: linkTo }).run()
+    showUrlDialog.value = true
+    return
+  }
+
   if (editor.value.isActive('link')) {
     editor.value.chain().focus().unsetLink().run()
     return
@@ -1089,32 +1142,48 @@ function setLink() {
   } else {
     // 有选中文本，弹出 URL 输入
     pendingLinkText.value = editor.value.state.doc.textBetween(from, to)
+    isLinkEditMode.value = false
+    // 将选中的文本传递给编辑框
+    editLinkText.value = pendingLinkText.value
+    editLinkHref.value = ''
     showUrlDialog.value = true
   }
 }
 
-function handleUrlConfirm(url: string) {
+function handleUrlConfirm(data: { text: string; url: string }) {
   if (!editor.value) return
 
   const editorInstance = editor.value
-  const { from, to } = editorInstance.state.selection
+  const { text, url } = data
 
-  // 确保有选中文本
-  if (from === to) {
-    // 如果没有选中文本，使用 URL 作为文本
+  if (isLinkEditMode.value) {
+    // 编辑模式：替换现有链接
     editorInstance.chain().focus()
-      .insertContent(url)
+      .insertContent(`<a href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`)
       .run()
-    const newPos = editorInstance.state.selection.from
-    editorInstance.chain().focus()
-      .setTextSelection({ from: newPos - url.length, to: newPos })
-      .setLink({ href: url })
-      .run()
+    isLinkEditMode.value = false
+    editLinkText.value = ''
+    editLinkHref.value = ''
   } else {
-    // 选中文本，直接设置为链接
-    editorInstance.chain().focus()
-      .setLink({ href: url })
-      .run()
+    const { from, to } = editorInstance.state.selection
+
+    // 确保有选中文本
+    if (from === to) {
+      // 如果没有选中文本，使用 URL 作为文本
+      editorInstance.chain().focus()
+        .insertContent(url)
+        .run()
+      const newPos = editorInstance.state.selection.from
+      editorInstance.chain().focus()
+        .setTextSelection({ from: newPos - url.length, to: newPos })
+        .setLink({ href: url })
+        .run()
+    } else {
+      // 选中文本，直接设置为链接
+      editorInstance.chain().focus()
+        .setLink({ href: url })
+        .run()
+    }
   }
 }
 

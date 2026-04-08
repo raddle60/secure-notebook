@@ -1,17 +1,29 @@
 <template>
   <div v-if="modelValue" class="link-dialog-overlay" @click="handleCancel">
     <div class="link-dialog" @click.stop>
-      <h3 class="dialog-title">{{ linkType === 'url' ? '插入链接' : '插入附件链接' }}</h3>
+      <h3 class="dialog-title">{{ isEditMode ? '编辑链接' : (linkType === 'url' ? '插入链接' : '插入附件链接') }}</h3>
 
       <!-- URL 输入模式 -->
       <div v-if="linkType === 'url'" class="url-input-section">
-        <input
-          ref="urlInputRef"
-          v-model="urlValue"
-          class="url-input"
-          placeholder="https://example.com"
-          @keyup.enter="handleUrlConfirm"
-        />
+        <div class="input-group">
+          <label class="input-label">链接文本</label>
+          <input
+            ref="textInputRef"
+            v-model="textValue"
+            class="url-input"
+            placeholder="请输入链接文本"
+          />
+        </div>
+        <div class="input-group">
+          <label class="input-label">链接地址</label>
+          <input
+            ref="urlInputRef"
+            v-model="urlValue"
+            class="url-input"
+            placeholder="https://example.com"
+            @keyup.enter="handleUrlConfirm"
+          />
+        </div>
       </div>
 
       <!-- 附件选择模式 -->
@@ -48,25 +60,42 @@ const props = defineProps<{
   modelValue: boolean
   noteId: string | null
   linkType?: 'url' | 'attachment'
+  isEditMode?: boolean
+  editLinkText?: string
+  editLinkHref?: string
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   'select': [data: { id: string; filename: string; href?: string }]
-  'url-confirm': [url: string]
+  'url-confirm': [data: { text: string; url: string }]
 }>()
 
 const attachments = ref<any[]>([])
 const selectedId = ref<string | null>(null)
 const urlValue = ref('')
+const textValue = ref('')
 const urlInputRef = ref<HTMLInputElement | null>(null)
+const textInputRef = ref<HTMLInputElement | null>(null)
 
 watch(() => props.modelValue, async (visible) => {
   if (visible) {
     if (props.linkType === 'url') {
-      urlValue.value = ''
+      if (props.isEditMode) {
+        // 编辑模式：填充现有值
+        urlValue.value = props.editLinkHref || ''
+        textValue.value = props.editLinkText || ''
+      } else {
+        // 插入模式：使用传入的文本（选中的文字）或清空
+        urlValue.value = ''
+        textValue.value = props.editLinkText || ''
+      }
       nextTick(() => {
-        urlInputRef.value?.focus()
+        if (props.isEditMode && props.editLinkText) {
+          textInputRef.value?.focus()
+        } else {
+          urlInputRef.value?.focus()
+        }
       })
     } else if (props.noteId) {
       attachments.value = await window.vaultAPI.attachments.list(props.noteId)
@@ -85,8 +114,9 @@ function handleConfirm() {
 
 function handleUrlConfirm() {
   const url = urlValue.value.trim()
+  const text = textValue.value.trim() || urlValue.value.trim()
   if (url) {
-    emit('url-confirm', url)
+    emit('url-confirm', { text, url })
     emit('update:modelValue', false)
   }
 }
@@ -147,6 +177,22 @@ function formatSize(bytes: number): string {
 
 .url-input-section {
   margin-bottom: 16px;
+}
+
+.input-group {
+  margin-bottom: 12px;
+}
+
+.input-group:last-child {
+  margin-bottom: 0;
+}
+
+.input-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .url-input {
