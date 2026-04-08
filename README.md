@@ -31,7 +31,7 @@
 # 存储结构
 ```
 userData/
-├── vault.salt              -- 128位Salt (16字节) + IV (16字节) + test_vector密文 (32字节) + 加密的加密密钥(32字节)
+├── vault.salt              -- 密钥文件
 ├── metadata.json           -- 笔记和目录列表数据（标题加密）
 ├── contents/
 │   └── {尾2字符哈希}/
