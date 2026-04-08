@@ -1,7 +1,7 @@
 <template>
   <div id="app">
-    <!-- 解锁屏幕：使用 v-show 仅隐藏而非销毁，保持主界面组件始终存活 -->
-    <UnlockScreen v-show="!isUnlocked && !isLoading" class="unlock-overlay" />
+    <!-- 解锁屏幕：使用 v-show 仅隐藏而非销毁，保持主界面组件始终存活；key 基于当前目录，目录变化时强制重建组件 -->
+    <UnlockScreen v-show="!isUnlocked && !isLoading" :key="currentVaultDir" class="unlock-overlay" />
     <div v-if="isLoading" class="loading">
       <p>加载中...</p>
     </div>
@@ -57,6 +57,19 @@ import SettingsDialog from './components/SettingsDialog.vue'
 const { isUnlocked, isLoading, checkUnlocked, lock } = useVault()
 const showSettings = ref(false)
 const api = window.vaultAPI
+
+// 当前金库目录路径，用于控制 UnlockScreen 组件的 key
+// 目录变化时，key 变化，Vue 会强制销毁并重建组件
+const currentVaultDir = ref<string>('')
+
+// 更新当前目录
+async function updateCurrentVaultDir() {
+  try {
+    currentVaultDir.value = await api.vault.getCurrentDir()
+  } catch (e) {
+    currentVaultDir.value = ''
+  }
+}
 
 // 自动锁定
 const { autoLockMinutes, updateAutoLockMinutes } = useAutoLock(() => {
@@ -263,6 +276,9 @@ onMounted(() => {
 
 async function handleLock() {
   await lock()
+  // 锁定后清空目录，这样下次解锁时如果是不同目录，会重新创建组件
+  currentVaultDir.value = ''
+  // 解锁时会由 useVault 中的 unlock/openVault 方法更新 currentVaultDir
 }
 </script>
 
