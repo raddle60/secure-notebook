@@ -1783,16 +1783,7 @@ onBeforeUnmount(() => {
   line-height: normal;
 }
 
-.editor-content :deep(.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div) {
-  text-decoration: line-through;
-  color: var(--text-secondary);
-}
 
-.editor-content :deep(.ProseMirror ul[data-type="taskList"] li[data-checked="true"]) {
-  opacity: 0.6;
-}
-
-/* 嵌套任务列表 */
 .editor-content :deep(.ProseMirror ul[data-type="taskList"] ul[data-type="taskList"]) {
   padding-left: 0.5em;
   margin: 0;

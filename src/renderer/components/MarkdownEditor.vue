@@ -1155,7 +1155,7 @@ watch(() => props.content, (newContent) => {
 .milkdown-wrapper :deep(.milkdown ul),
 .milkdown-wrapper :deep(.milkdown ol) {
   margin: 0.1em 0;
-  padding-left: 1.5em;
+  padding-left: 0.5em;
   font-family: var(--editor-font-family, 'Consolas, "Courier New", monospace') !important;
   font-size: var(--editor-font-size, 14px) !important;
 }
