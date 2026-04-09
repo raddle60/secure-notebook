@@ -1724,9 +1724,52 @@ onBeforeUnmount(() => {
 }
 
 .editor-content :deep(.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]) {
+  width: 16px;
+  height: 16px;
   margin: 0 0.4em 0 0;
   cursor: pointer;
   accent-color: var(--accent-color);
+  border: 2px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--bg-primary);
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+}
+
+.editor-content :deep(.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:checked)::after {
+  content: '✓';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* 亮色主题下的任务列表 checkbox */
+:root[data-theme='light'] .editor-content :deep(.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]) {
+  border-color: #57606a;
+  background: #ffffff;
+}
+
+:root[data-theme='light'] .editor-content :deep(.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:checked) {
+  background: #2da44e;
+  border-color: #2da44e;
+}
+
+/* 暗色主题下的任务列表 checkbox */
+:root[data-theme='dark'] .editor-content :deep(.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]) {
+  border-color: #8b949e;
+  background: #0d1117;
+}
+
+:root[data-theme='dark'] .editor-content :deep(.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:checked) {
+  background: #238636;
+  border-color: #238636;
 }
 
 .editor-content :deep(.ProseMirror ul[data-type="taskList"] li > div) {
