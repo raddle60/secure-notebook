@@ -1207,8 +1207,20 @@ watch(() => props.content, (newContent) => {
 
 /* 暗色主题下的任务列表 - 使用更柔和的绿色 */
 .milkdown-wrapper :deep(.milkdown li[data-item-type="task"][data-checked="true"])::before {
-  background: #2da44e;
-  border-color: #2da44e;
+  background: #238636;
+  border-color: #238636;
+}
+
+/* 已完成任务文字颜色 - 亮色主题 */
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"][data-checked="true"]),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"][data-checked="true"] p) {
+  color: #007a33 !important;
+}
+
+/* 已完成任务文字颜色 - 暗色主题 */
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"][data-checked="true"]),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"][data-checked="true"] p) {
+  color: #237233 !important;
 }
 
 /* Mermaid 图表样式 */

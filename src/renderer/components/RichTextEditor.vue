@@ -1783,7 +1783,20 @@ onBeforeUnmount(() => {
   line-height: normal;
 }
 
+.editor-content :deep(.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div) {
+  color: #1d9f53 !important;
+}
 
+.editor-content :deep(.ProseMirror ul[data-type="taskList"] li[data-checked="true"]) {
+  opacity: 1;
+}
+
+/* 暗色主题下的已完成任务 */
+:root[data-theme='dark'] .editor-content :deep(.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div p) {
+  color: #237233 !important;
+}
+
+/* 嵌套任务列表 */
 .editor-content :deep(.ProseMirror ul[data-type="taskList"] ul[data-type="taskList"]) {
   padding-left: 0.5em;
   margin: 0;
