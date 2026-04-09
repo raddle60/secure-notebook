@@ -154,7 +154,9 @@ import { Editor, rootCtx, defaultValueCtx, editorViewCtx, editorStateCtx } from 
 import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm } from '@milkdown/kit/preset/gfm'
 import { clipboard } from '@milkdown/plugin-clipboard'
+import { diagram, mermaidConfigCtx } from '@milkdown/plugin-diagram'
 import { parserCtx } from '@milkdown/core'
+import mermaid from 'mermaid'
 import { EditorState, EditorSelection } from '@codemirror/state'
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightSpecialChars, highlightWhitespace, drawSelection } from '@codemirror/view'
 import { defaultKeymap, history as cmHistory, historyKeymap, indentWithTab } from '@codemirror/commands'
@@ -604,6 +606,12 @@ async function proxyImageUrl(url: string): Promise<string> {
 async function initMilkdown(content: string) {
   if (!previewRef.value) return
 
+  // 初始化 mermaid
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default',
+  })
+
   milkdownEditor = Editor.make()
 
   milkdownEditor
@@ -613,21 +621,52 @@ async function initMilkdown(content: string) {
       ctx.set(inlineImageConfig.key, {
         proxyDomURL: proxyImageUrl,
       })
+      ctx.set(mermaidConfigCtx.key, {
+        startOnLoad: false,
+        theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default',
+      })
     })
     .use(commonmark)
     .use(gfm)
     .use(clipboard)
     .use(imageInlineComponent)
+    .use(diagram)
 
   await milkdownEditor.create()
 
-  // 设置为只读模式，禁止编辑
+  // 为 diagram 节点添加 NodeView 来渲染 mermaid
   milkdownEditor.action((ctx) => {
     const view = ctx.get(editorViewCtx)
-    // 设置 contenteditable 为 false
     view.dom.setAttribute('contenteditable', 'false')
     view.dom.style.cursor = 'default'
   })
+
+  // 渲染 mermaid 图表
+  renderMermaidDiagrams()
+}
+
+// 渲染 mermaid 图表
+async function renderMermaidDiagrams() {
+  if (!previewRef.value) return
+
+  const diagramElements = previewRef.value.querySelectorAll<HTMLDivElement>('div[data-type="diagram"]')
+  if (diagramElements.length === 0) return
+
+  for (const diagramEl of diagramElements) {
+    const code = diagramEl.dataset.value || diagramEl.textContent || ''
+    const id = diagramEl.dataset.id || `mermaid-${Date.now()}`
+
+    if (!code.trim()) continue
+
+    try {
+      // 检查代码是否有效
+      const { svg } = await mermaid.render(id, code)
+      diagramEl.innerHTML = svg
+    } catch (error) {
+      // 渲染失败时显示错误信息
+      diagramEl.innerHTML = `<div style="color: #ef4444; padding: 10px; background: #fee2e2; border-radius: 4px;">Mermaid 渲染失败：${code.substring(0, 50)}...</div>`
+    }
+  }
 }
 
 // 更新 Milkdown 内容
@@ -642,6 +681,8 @@ function updateMilkdown(content: string) {
       const newDoc = parser(processedContent)
       view.dispatch(state.tr.replaceWith(0, state.doc.content.size, newDoc.content))
     })
+    // 更新后重新渲染 mermaid 图表
+    renderMermaidDiagrams()
   }
 }
 
@@ -659,6 +700,16 @@ onMounted(async () => {
           cmView.dispatch({
             effects: themeCompartment.reconfigure(getHighlightStyle())
           })
+        }
+        // 切换 Mermaid 主题并重新渲染
+        if (milkdownEditor) {
+          const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+          mermaid.initialize({
+            startOnLoad: false,
+            theme: isDark ? 'dark' : 'default',
+          })
+          // 重新渲染 Mermaid 图表
+          renderMermaidDiagrams()
         }
         break
       }
@@ -1150,8 +1201,30 @@ watch(() => props.content, (newContent) => {
 }
 
 /* 暗色主题下的任务列表 - 使用更柔和的绿色 */
-:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"][data-checked="true"])::before {
-  background: #238636;
-  border-color: #238636;
+.milkdown-wrapper :deep(.milkdown li[data-item-type="task"][data-checked="true"])::before {
+  background: #2da44e;
+  border-color: #2da44e;
+}
+
+/* Mermaid 图表样式 */
+.milkdown-wrapper :deep(.milkdown div[data-type="diagram"]) {
+  margin: 1em 0;
+  padding: 1em;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.milkdown-wrapper :deep(.milkdown div[data-type="diagram"]) svg {
+  max-width: 100%;
+  height: auto;
+}
+
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown div[data-type="diagram"]) {
+  background: #161b22;
+  border-color: #30363d;
 }
 </style>
