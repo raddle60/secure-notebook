@@ -56,8 +56,11 @@ userData/
 markdown编辑器  
 ![markdown编辑器](screenshot/markdown_editor.png)
 
+markdown-任务列表+图  
+![任务列表+图](screenshot/mk_task_diagram.png)
+
 富文本编辑器  
 ![富文本编辑器](screenshot/rich_text_editor.png)
 
-任务列表  
+富文本-任务列表  
 ![任务列表](screenshot/task_list.png)

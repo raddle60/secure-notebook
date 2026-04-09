@@ -125,7 +125,7 @@
     <!-- 编辑器主体 -->
     <div class="editor-panes">
       <!-- 左侧: CodeMirror 源码编辑 -->
-      <div class="pane source-pane" v-show="showSource" :style="{ width: sourcePaneWidth + 'px' }">
+      <div class="pane source-pane" v-show="showSource" :style="{ width: showPreview ? sourcePaneWidth + 'px' : '100%' }">
         <div class="pane-header">Markdown 源码编辑</div>
         <div class="codemirror-wrapper" ref="sourceRef"></div>
       </div>
@@ -140,7 +140,7 @@
       </div>
 
       <!-- 右侧: Milkdown 只读预览 -->
-      <div class="pane preview-pane" v-show="showPreview" :style="{ flex: showSource ? 'none' : '1' }">
+      <div class="pane preview-pane" v-show="showPreview">
         <div class="pane-header">Markdown 预览</div>
         <div class="milkdown-wrapper" ref="previewRef" @click="handlePreviewClick"></div>
       </div>
@@ -829,6 +829,11 @@ watch(() => props.content, (newContent) => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.preview-pane {
+  flex: 1;
+  min-width: 0;
 }
 
 .pane-divider {
