@@ -1794,7 +1794,7 @@ onBeforeUnmount(() => {
 
 /* 嵌套任务列表 */
 .editor-content :deep(.ProseMirror ul[data-type="taskList"] ul[data-type="taskList"]) {
-  padding-left: 1.2em;
+  padding-left: 0.5em;
   margin: 0;
 }
 
