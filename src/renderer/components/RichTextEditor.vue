@@ -330,6 +330,17 @@
           </svg>
         </button>
         <button
+          @click="editor.chain().focus().toggleTaskList().run()"
+          :class="{ active: editor.isActive('taskList') }"
+          title="任务列表"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 11l3 3L22 4"/>
+            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+            <rect x="3" y="3" width="4" height="4" rx="1" fill="none" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </button>
+        <button
           @click="editor.chain().focus().toggleBlockquote().run()"
           :class="{ active: editor.isActive('blockquote') }"
           title="引用"
@@ -601,7 +612,7 @@
       v-if="!isSourceMode"
       :editor="editor"
       class="editor-content"
-      @click.prevent="handleEditorClick"
+      @click="handleEditorClick"
       @paste="handleEditorPaste"
       @contextmenu="handleContextMenu"
     />
@@ -642,6 +653,7 @@ import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
 import { FontSize, TextStyle, FontFamily, Color } from '@tiptap/extension-text-style'
 import Highlight from '@tiptap/extension-highlight'
+import { TaskList, TaskItem } from '@tiptap/extension-list'
 import LinkDialog from './LinkDialog.vue'
 import ImageDialog from './ImageDialog.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
@@ -1065,12 +1077,17 @@ const editor = useEditor({
     Highlight.configure({
       multicolor: true
     }),
+    TaskList,
+    TaskItem.configure({
+      nested: true
+    }),
     SearchHighlight
   ],
   content: props.content || '',
   editorProps: {
     attributes: {
-      class: 'rich-text-editor'
+      class: 'rich-text-editor',
+      spellcheck: 'false'
     }
   },
   onUpdate: ({ editor }) => {
@@ -1286,6 +1303,12 @@ function handleEditorPaste(event: ClipboardEvent) {
 }
 
 function handleEditorClick(event: MouseEvent) {
+  // 如果点击的是 taskList 的 checkbox，不处理（让 TipTap 自己处理）
+  const clickTarget = event.target as HTMLElement
+  if (clickTarget.tagName === 'INPUT' && clickTarget.getAttribute('type') === 'checkbox') {
+    return
+  }
+
   // 如果格式刷激活，应用格式
   if (isFormatBrushActive.value && editor.value) {
     event.preventDefault()
@@ -1294,8 +1317,7 @@ function handleEditorClick(event: MouseEvent) {
     return
   }
 
-  const target = event.target as HTMLElement
-  const link = target.closest('a')
+  const link = clickTarget.closest('a')
 
   if (link) {
     const href = link.getAttribute('href')
@@ -1679,6 +1701,60 @@ onBeforeUnmount(() => {
 .editor-content :deep(.ProseMirror li p) {
   margin: 0;
 }
+
+/* 任务列表样式 */
+.editor-content :deep(.ProseMirror ul[data-type="taskList"]) {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.editor-content :deep(.ProseMirror ul[data-type="taskList"] li) {
+  display: flex;
+  align-items: baseline;
+  margin: 0em 0;
+}
+
+.editor-content :deep(.ProseMirror ul[data-type="taskList"] li > label) {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.editor-content :deep(.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]) {
+  margin: 0 0.4em 0 0;
+  cursor: pointer;
+  accent-color: var(--accent-color);
+}
+
+.editor-content :deep(.ProseMirror ul[data-type="taskList"] li > div) {
+  flex: 1;
+  min-width: 0;
+  line-height: normal;
+}
+
+.editor-content :deep(.ProseMirror ul[data-type="taskList"] li > div p) {
+  margin: 0;
+  line-height: normal;
+}
+
+.editor-content :deep(.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div) {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+
+.editor-content :deep(.ProseMirror ul[data-type="taskList"] li[data-checked="true"]) {
+  opacity: 0.6;
+}
+
+/* 嵌套任务列表 */
+.editor-content :deep(.ProseMirror ul[data-type="taskList"] ul[data-type="taskList"]) {
+  padding-left: 1.2em;
+  margin: 0;
+}
+
 
 .editor-content :deep(.ProseMirror blockquote) {
   border-left: 3px solid var(--accent-color);
