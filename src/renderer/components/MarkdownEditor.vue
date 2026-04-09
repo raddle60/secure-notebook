@@ -125,13 +125,22 @@
     <!-- 编辑器主体 -->
     <div class="editor-panes">
       <!-- 左侧: CodeMirror 源码编辑 -->
-      <div class="pane source-pane" v-show="showSource">
+      <div class="pane source-pane" v-show="showSource" :style="{ width: sourcePaneWidth + 'px' }">
         <div class="pane-header">Markdown 源码编辑</div>
         <div class="codemirror-wrapper" ref="sourceRef"></div>
       </div>
 
+      <!-- 分割栏 -->
+      <div
+        v-if="showSource && showPreview"
+        class="pane-divider"
+        @mousedown="startDrag"
+      >
+        <div class="divider-handle"></div>
+      </div>
+
       <!-- 右侧: Milkdown 只读预览 -->
-      <div class="pane preview-pane" v-show="showPreview">
+      <div class="pane preview-pane" v-show="showPreview" :style="{ flex: showSource ? 'none' : '1' }">
         <div class="pane-header">Markdown 预览</div>
         <div class="milkdown-wrapper" ref="previewRef" @click="handlePreviewClick"></div>
       </div>
@@ -195,6 +204,12 @@ const highlightSelection = ref(true)
 const showWhitespace = ref(false)
 const sourceRef = ref<HTMLDivElement | null>(null)
 const previewRef = ref<HTMLDivElement | null>(null)
+const sourcePaneWidth = ref(300) // 默认宽度
+
+// 拖动相关
+let isDragging = false
+let startX = 0
+let startWidth = 0
 
 // 编辑器实例
 let milkdownEditor: Editor | null = null
@@ -236,6 +251,7 @@ async function loadSettings() {
   showPreview.value = settings.showPreview
   highlightSelection.value = settings.highlightSelection ?? true
   showWhitespace.value = settings.showWhitespace ?? false
+  sourcePaneWidth.value = settings.sourcePaneWidth ?? 300
 }
 
 // 保存设置
@@ -245,8 +261,36 @@ function saveSettings() {
     showSource: showSource.value,
     showPreview: showPreview.value,
     highlightSelection: highlightSelection.value,
-    showWhitespace: showWhitespace.value
+    showWhitespace: showWhitespace.value,
+    sourcePaneWidth: sourcePaneWidth.value
   })
+}
+
+// 拖动相关函数
+function startDrag(e: MouseEvent) {
+  isDragging = true
+  startX = e.clientX
+  startWidth = sourcePaneWidth.value
+  document.addEventListener('mousemove', onDrag)
+  document.addEventListener('mouseup', stopDrag)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+function onDrag(e: MouseEvent) {
+  if (!isDragging) return
+  const deltaX = e.clientX - startX
+  const newWidth = Math.max(200, Math.min(800, startWidth + deltaX))
+  sourcePaneWidth.value = newWidth
+}
+
+function stopDrag() {
+  isDragging = false
+  document.removeEventListener('mousemove', onDrag)
+  document.removeEventListener('mouseup', stopDrag)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  saveSettings()
 }
 
 // 切换源码面板
@@ -627,6 +671,9 @@ onBeforeUnmount(() => {
   observer?.disconnect()
   milkdownEditor?.destroy()
   cmView?.destroy()
+  // 清理拖动事件监听器
+  document.removeEventListener('mousemove', onDrag)
+  document.removeEventListener('mouseup', stopDrag)
 })
 
 watch(() => props.content, (newContent) => {
@@ -728,10 +775,35 @@ watch(() => props.content, (newContent) => {
 }
 
 .pane {
-  flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.pane-divider {
+  width: 4px;
+  cursor: col-resize;
+  background: var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.pane-divider:hover {
+  background: var(--accent-color);
+}
+
+.divider-handle {
+  width: 2px;
+  height: 30px;
+  background: var(--text-secondary);
+  border-radius: 2px;
+  opacity: 0.5;
+}
+
+.pane-divider:hover .divider-handle {
+  opacity: 1;
 }
 
 .source-pane {

@@ -192,11 +192,11 @@ export class SettingsService {
     this.save()
   }
 
-  getMarkdownEditorSettings(): { showLineNumbers: boolean; showSource: boolean; showPreview: boolean } {
+  getMarkdownEditorSettings(): { showLineNumbers: boolean; showSource: boolean; showPreview: boolean; highlightSelection?: boolean; showWhitespace?: boolean; sourcePaneWidth?: number } {
     return { ...this.settings.markdownEditor }
   }
 
-  updateMarkdownEditorSettings(settings: Partial<{ showLineNumbers: boolean; showSource: boolean; showPreview: boolean }>): void {
+  updateMarkdownEditorSettings(settings: Partial<{ showLineNumbers: boolean; showSource: boolean; showPreview: boolean; highlightSelection?: boolean; showWhitespace?: boolean; sourcePaneWidth?: number }>): void {
     this.settings.markdownEditor = { ...this.settings.markdownEditor, ...settings }
     this.save()
   }

@@ -125,8 +125,8 @@ declare global {
         clearLastOpenedNoteId: () => Promise<{ success: boolean }>
         getPlainTextEditorSettings: () => Promise<{ showLineNumbers: boolean }>
         updatePlainTextEditorSettings: (settings: { showLineNumbers?: boolean; language?: string }) => Promise<{ success: boolean }>
-        getMarkdownEditorSettings: () => Promise<{ showLineNumbers: boolean; showSource: boolean; showPreview: boolean }>
-        updateMarkdownEditorSettings: (settings: { showLineNumbers?: boolean; showSource?: boolean; showPreview?: boolean }) => Promise<{ success: boolean }>
+        getMarkdownEditorSettings: () => Promise<{ showLineNumbers: boolean; showSource: boolean; showPreview: boolean; highlightSelection?: boolean; showWhitespace?: boolean; sourcePaneWidth?: number }>
+        updateMarkdownEditorSettings: (settings: { showLineNumbers?: boolean; showSource?: boolean; showPreview?: boolean; highlightSelection?: boolean; showWhitespace?: boolean; sourcePaneWidth?: number }) => Promise<{ success: boolean }>
         getTheme: () => Promise<'light' | 'dark'>
         updateTheme: (theme: 'light' | 'dark') => Promise<{ success: boolean }>
         getAutoLockMinutes: () => Promise<number>
