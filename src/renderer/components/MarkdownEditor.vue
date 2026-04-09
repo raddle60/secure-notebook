@@ -1218,14 +1218,18 @@ watch(() => props.content, (newContent) => {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  display: flex;
+  display: inline-flex;
   justify-content: center;
   align-items: center;
+  max-width: 100%;
+  width: fit-content;
+  min-width: 200px;
 }
 
 .milkdown-wrapper :deep(.milkdown div[data-type="diagram"]) svg {
   max-width: 100%;
   height: auto;
+  display: block;
 }
 
 :root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown div[data-type="diagram"]) {
