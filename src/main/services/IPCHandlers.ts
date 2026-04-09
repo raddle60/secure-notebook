@@ -535,6 +535,16 @@ export function registerIPCHandlers(): void {
     return { success: true }
   })
 
+  // 系统闲置状态查询
+  ipcMain.handle('system:getIdleState', () => {
+    const { powerMonitor } = require('electron')
+    const idleThresholdSeconds = settingsService.getAutoLockMinutes() * 60
+    if (idleThresholdSeconds <= 0) {
+      return 'disabled' // 自动锁定已禁用
+    }
+    return powerMonitor.getSystemIdleState(idleThresholdSeconds)
+  })
+
   // Editor font settings
   ipcMain.handle('settings:getEditorFont', () => {
     return settingsService.getEditorFont()

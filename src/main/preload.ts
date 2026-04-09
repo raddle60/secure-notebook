@@ -80,6 +80,9 @@ const api = {
     getEditorInstanceCacheSize: () => ipcRenderer.invoke('settings:getEditorInstanceCacheSize'),
     updateEditorInstanceCacheSize: (size: number) => ipcRenderer.invoke('settings:updateEditorInstanceCacheSize', size)
   },
+  system: {
+    getIdleState: () => ipcRenderer.invoke('system:getIdleState')
+  },
   app: {
     openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
     openFolder: (folderPath: string) => ipcRenderer.invoke('app:openFolder', folderPath)

@@ -1,29 +1,33 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 
 export function useAutoLock(onLock: () => void) {
   const autoLockMinutes = ref(10)
-  const timerRef = ref<number | null>(null)
-  const cleanupFn = ref<(() => void) | null>(null)
+  const checkInterval = ref<number | null>(null)
+  const cleanupFnRef = ref<(() => void) | null>(null)
 
-  function resetTimer() {
-    if (timerRef.value) {
-      window.clearTimeout(timerRef.value)
+  function startPolling() {
+    if (checkInterval.value) {
+      window.clearInterval(checkInterval.value)
     }
 
-    const minutes = autoLockMinutes.value
-    if (minutes <= 0) {
-      // 0 表示禁用自动锁定
-      timerRef.value = null
-      return
-    }
+    // 立即检查一次
+    checkIdleState()
 
-    timerRef.value = window.setTimeout(() => {
-      onLock()
-    }, minutes * 60 * 1000)
+    // 每 10 秒检查一次
+    checkInterval.value = window.setInterval(() => {
+      checkIdleState()
+    }, 10000)
   }
 
-  function handleActivity() {
-    resetTimer()
+  async function checkIdleState() {
+    try {
+      const state = await window.vaultAPI.system.getIdleState()
+      if (state === 'idle' || state === 'locked') {
+        onLock()
+      }
+    } catch (e) {
+      console.error('[useAutoLock] Error checking idle state:', e)
+    }
   }
 
   onMounted(async () => {
@@ -35,43 +39,52 @@ export function useAutoLock(onLock: () => void) {
       autoLockMinutes.value = 10 // 默认 10 分钟
     }
 
-    // 监听用户活动事件
-    const events = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart', 'click']
-    events.forEach(event => {
-      document.addEventListener(event, handleActivity, { passive: true, capture: true })
-    })
-
-    // 监听主进程发送的锁定事件
-    cleanupFn.value = window.vaultAPI.onVaultLocked(() => {
+    // 监听主进程发送的锁定事件（系统锁屏、挂起等）
+    cleanupFnRef.value = window.vaultAPI.onVaultLocked(() => {
       onLock()
     })
 
-    // 初始化计时器
-    resetTimer()
+    // 如果启用了自动锁定，启动轮询检查
+    if (autoLockMinutes.value > 0) {
+      startPolling()
+    }
   })
 
   onUnmounted(() => {
-    if (timerRef.value) {
-      window.clearTimeout(timerRef.value)
+    if (checkInterval.value) {
+      window.clearInterval(checkInterval.value)
     }
-
-    // 移除事件监听
-    const events = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart', 'click']
-    events.forEach(event => {
-      document.removeEventListener(event, handleActivity, { capture: true })
-    })
-
-    // 清理 IPC 监听器
-    if (cleanupFn.value) {
-      cleanupFn.value()
+    if (cleanupFnRef.value) {
+      cleanupFnRef.value()
     }
   })
 
   async function updateAutoLockMinutes(minutes: number) {
     await window.vaultAPI.settings.updateAutoLockMinutes(minutes)
     autoLockMinutes.value = minutes
-    resetTimer()
+
+    // 重启轮询
+    if (minutes > 0) {
+      startPolling()
+    } else {
+      if (checkInterval.value) {
+        window.clearInterval(checkInterval.value)
+        checkInterval.value = null
+      }
+    }
   }
+
+  // 监听设置变化，自动重启轮询
+  watch(autoLockMinutes, (newVal) => {
+    if (newVal > 0) {
+      startPolling()
+    } else {
+      if (checkInterval.value) {
+        window.clearInterval(checkInterval.value)
+        checkInterval.value = null
+      }
+    }
+  })
 
   return {
     autoLockMinutes,
