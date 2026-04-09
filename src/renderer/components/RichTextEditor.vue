@@ -1763,8 +1763,8 @@ onBeforeUnmount(() => {
 
 /* 暗色主题下的任务列表 checkbox */
 :root[data-theme='dark'] .editor-content :deep(.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]) {
-  border-color: #8b949e;
-  background: #0d1117;
+  border-color: var(--border-color);
+  background: var(--bg-primary);
 }
 
 :root[data-theme='dark'] .editor-content :deep(.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:checked) {
