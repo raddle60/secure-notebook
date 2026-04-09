@@ -143,6 +143,7 @@
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { Editor, rootCtx, defaultValueCtx, editorViewCtx, editorStateCtx } from '@milkdown/kit/core'
 import { commonmark } from '@milkdown/kit/preset/commonmark'
+import { gfm } from '@milkdown/kit/preset/gfm'
 import { clipboard } from '@milkdown/plugin-clipboard'
 import { parserCtx } from '@milkdown/core'
 import { EditorState, EditorSelection } from '@codemirror/state'
@@ -570,6 +571,7 @@ async function initMilkdown(content: string) {
       })
     })
     .use(commonmark)
+    .use(gfm)
     .use(clipboard)
     .use(imageInlineComponent)
 
@@ -1037,5 +1039,47 @@ watch(() => props.content, (newContent) => {
 
 .milkdown-wrapper :deep(.milkdown img) {
   max-width: 100%;
+}
+
+/* 任务列表（GFM）样式 */
+.milkdown-wrapper :deep(.milkdown li[data-item-type="task"]) {
+  list-style: none;
+  position: relative;
+  padding-left: 24px;
+}
+
+.milkdown-wrapper :deep(.milkdown li[data-item-type="task"])::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--bg-primary);
+  cursor: pointer;
+}
+
+.milkdown-wrapper :deep(.milkdown li[data-item-type="task"][data-checked="true"])::before {
+  content: '✓';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* 亮色主题下的任务列表 */
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"][data-checked="true"])::before {
+  background: #2da44e;
+  border-color: #2da44e;
+}
+
+/* 暗色主题下的任务列表 - 使用更柔和的绿色 */
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"][data-checked="true"])::before {
+  background: #238636;
+  border-color: #238636;
 }
 </style>
