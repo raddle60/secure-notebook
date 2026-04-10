@@ -54,6 +54,7 @@
             placeholder="输入主密码"
             class="password-input"
             autofocus
+            autocomplete="off"
           />
           <p v-if="error" class="error">{{ error }}</p>
           <button type="submit" class="action-btn" :disabled="loading">
@@ -125,6 +126,7 @@
             :class="{ 'input-invalid': !passwordRules.valid && password }"
             autofocus
             @input="validatePassword"
+            autocomplete="off"
           />
           <input
             v-model="confirmPassword"
@@ -133,6 +135,7 @@
             class="password-input"
             :class="{ 'input-invalid': confirmPassword && password !== confirmPassword }"
             @input="validatePassword"
+            autocomplete="off"
           />
           <p v-if="error" class="error">{{ error }}</p>
           <button type="submit" class="action-btn" :disabled="loading || !passwordRules.valid || password !== confirmPassword">
@@ -281,7 +284,7 @@ async function handleUnlock() {
         error.value = '密码错误'
       }
     } else {
-      // 解锁成功后清空密码
+      // 解锁成功后立即清空密码
       password.value = ''
       confirmPassword.value = ''
     }

@@ -15,6 +15,7 @@
               placeholder="输入旧密码"
               class="form-input"
               autofocus
+              autocomplete="off"
             />
           </div>
           <div class="form-group">
@@ -24,6 +25,7 @@
               type="password"
               placeholder="输入新密码"
               class="form-input"
+              autocomplete="off"
             />
             <p v-if="newPassword && newPassword.length < 8" class="hint error">
               密码至少 8 个字符
@@ -42,6 +44,7 @@
               type="password"
               placeholder="再次输入新密码"
               class="form-input"
+              autocomplete="off"
             />
           </div>
           <p v-if="error" class="error-message">{{ error }}</p>
@@ -122,6 +125,10 @@ async function handleChangePassword() {
   try {
     const result = await changePassword(oldPassword.value, newPassword.value)
     if (result.success) {
+      // 成功后立即清空密码
+      oldPassword.value = ''
+      newPassword.value = ''
+      confirmPassword.value = ''
       emit('close')
     } else {
       error.value = result.error || '密码修改失败'

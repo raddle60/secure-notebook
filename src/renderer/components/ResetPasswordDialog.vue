@@ -55,6 +55,7 @@
               placeholder="输入新密码"
               class="form-input"
               autofocus
+              autocomplete="off"
             />
             <div class="password-rules">
               <p :class="{ valid: passwordRules.length, invalid: !passwordRules.length && newPassword }">
@@ -76,6 +77,7 @@
               placeholder="再次输入新密码"
               class="form-input"
               :class="{ 'input-invalid': confirmPassword && newPassword !== confirmPassword }"
+              autocomplete="off"
             />
           </div>
           <div v-if="error" class="error-message">{{ error }}</div>
@@ -267,6 +269,9 @@ async function goToStep4() {
     if (result.success) {
       resetSuccess.value = true
       step.value = 4
+      // 成功后立即清空密码
+      newPassword.value = ''
+      confirmPassword.value = ''
     } else {
       resetFailed.value = true
       resetError.value = result.error || '重置失败'
