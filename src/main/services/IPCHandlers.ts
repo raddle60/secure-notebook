@@ -596,4 +596,42 @@ export function registerIPCHandlers(): void {
     shell.openPath(folderPath)
     return { success: true }
   })
+
+  // Recovery handlers
+  ipcMain.handle('recovery:getGenCount', () => {
+    return databaseService.getRecoveryKeyGenCount()
+  })
+
+  ipcMain.handle('recovery:generate', async (_, saveDir: string) => {
+    try {
+      const { data, filename } = await cryptoService.generateRecoveryKey()
+      const fullPath = path.join(saveDir, filename)
+      fs.writeFileSync(fullPath, data)
+      return { success: true, filename, fullPath }
+    } catch (error) {
+      console.error('[Recovery:generate] Error:', error)
+      return { success: false, error: '生成重置密钥文件失败' }
+    }
+  })
+
+  ipcMain.handle('recovery:verify', async (_, recoveryKeyPath: string) => {
+    const valid = await cryptoService.verifyRecoveryKey(recoveryKeyPath)
+    return { valid }
+  })
+
+  ipcMain.handle('recovery:reset', async (_, recoveryKeyPath: string, newPassword: string) => {
+    const result = await cryptoService.resetPassword(recoveryKeyPath, newPassword)
+    return result
+  })
+
+  ipcMain.handle('recovery:selectSavePath', async () => {
+    const result = await dialog.showOpenDialog({
+      title: '选择重置密钥文件保存目录',
+      properties: ['openDirectory', 'createDirectory']
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return null
+    }
+    return result.filePaths[0]
+  })
 }

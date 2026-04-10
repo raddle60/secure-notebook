@@ -134,6 +134,13 @@ declare global {
         getEditorFont: () => Promise<{ fontFamily: string; fontSize: number }>
         updateEditorFont: (fontFamily: string, fontSize: number) => Promise<{ success: boolean }>
       }
+      recovery: {
+        getGenCount: () => Promise<number>
+        generate: (saveDir: string) => Promise<{ success: boolean; filename?: string; error?: string }>
+        verify: (recoveryKeyPath: string) => Promise<{ valid: boolean }>
+        reset: (recoveryKeyPath: string, newPassword: string) => Promise<{ success: boolean; error?: string }>
+        selectSaveDir: () => Promise<string | null>
+      }
       onVaultLocked: (callback: () => void) => () => void
     }
   }
@@ -319,6 +326,26 @@ export function useVault() {
 
   async function changePassword(oldPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
     return await api.vault.changePassword(oldPassword, newPassword)
+  }
+
+  async function getRecoveryKeyGenCount(): Promise<number> {
+    return await api.recovery.getGenCount()
+  }
+
+  async function generateRecoveryKey(savePath: string): Promise<{ success: boolean; filename?: string; error?: string }> {
+    return await api.recovery.generate(savePath)
+  }
+
+  async function verifyRecoveryKey(recoveryKeyPath: string): Promise<{ valid: boolean }> {
+    return await api.recovery.verify(recoveryKeyPath)
+  }
+
+  async function resetPassword(recoveryKeyPath: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+    return await api.recovery.reset(recoveryKeyPath, newPassword)
+  }
+
+  async function selectRecoveryKeySaveDir(): Promise<string | null> {
+    return await api.recovery.selectSaveDir()
   }
 
   async function loadFolders() {
@@ -510,6 +537,11 @@ export function useVault() {
     unlock,
     lock,
     changePassword,
+    getRecoveryKeyGenCount,
+    generateRecoveryKey,
+    verifyRecoveryKey,
+    resetPassword,
+    selectRecoveryKeySaveDir,
     loadFolders,
     refreshNotes,
     createFolder,

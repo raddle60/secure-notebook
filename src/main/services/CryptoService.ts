@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { app } from 'electron'
 import argon2 from 'argon2'
+import { databaseService } from './DatabaseService'
 
 // 常量：密钥格式版本和数据格式版本
 export const KEY_FORMAT_VERSION = 2
@@ -35,6 +36,9 @@ export function validatePassword(password: string): { valid: boolean; error?: st
   }
   return { valid: true }
 }
+
+// 重置密码的固定 passphrase（硬编码）
+const RECOVERY_PASSPHRASE = "SecureNotebookRecoveryPassphrase_v1_2026"
 // vault.salt 格式 (144 字节): salt(16) + iv_hash(16) + tag_hash(16) + encrypted_hash(32) + iv_key(16) + tag_key(16) + encrypted_masterKey(32)
 
 export class CryptoService {
@@ -341,6 +345,185 @@ export class CryptoService {
 
     // masterKey 保持不变（仍然是原始的首次派生密钥）
     return { success: true }
+  }
+
+  /**
+   * 生成 recovery key 文件
+   * @returns 返回 recovery key 数据和文件名
+   */
+  async generateRecoveryKey(): Promise<{ data: Buffer; filename: string }> {
+    const vaultPath = this.getVaultSaltPath()
+    const data = fs.readFileSync(vaultPath)
+    const vaultSalt = data.subarray(0, SALT_LENGTH)
+
+    // 生成 recovery_key_enc = derive_key(RECOVERY_PASSPHRASE + vault_salt)
+    const recoveryKeyEnc = await this.deriveRecoveryKey(vaultSalt)
+
+    // 用 recovery_key_enc 加密 masterKey
+    const iv = crypto.randomBytes(IV_LENGTH)
+    const cipher = crypto.createCipheriv(ALGORITHM_GCM, recoveryKeyEnc, iv)
+    const encryptedMasterKey = Buffer.concat([cipher.update(this.masterKey!), cipher.final()])
+    const tag = cipher.getAuthTag()
+
+    // recovery.key 数据 = iv(16) + tag(16) + encrypted_masterKey(32) = 64 字节
+    const recoveryData = Buffer.concat([iv, tag, encryptedMasterKey])
+
+    // 生成文件名：recovery_yyyyMMddHHmmss_N.key
+    const count = databaseService.incrementRecoveryKeyGenCount()
+    const now = new Date()
+    const timestamp = now.getFullYear().toString() +
+      String(now.getMonth() + 1).padStart(2, '0') +
+      String(now.getDate()).padStart(2, '0') +
+      String(now.getHours()).padStart(2, '0') +
+      String(now.getMinutes()).padStart(2, '0') +
+      String(now.getSeconds()).padStart(2, '0')
+    const filename = `recovery_${timestamp}_${count}.key`
+
+    return { data: recoveryData, filename }
+  }
+
+  /**
+   * 验证 recovery key 文件是否有效
+   */
+  async verifyRecoveryKey(recoveryKeyPath: string): Promise<boolean> {
+    try {
+      if (!fs.existsSync(recoveryKeyPath)) {
+        return false
+      }
+
+      const vaultPath = this.getVaultSaltPath()
+      if (!fs.existsSync(vaultPath)) {
+        return false
+      }
+
+      // 读取 vault.salt 获取 vault_salt
+      const vaultData = fs.readFileSync(vaultPath)
+      const vaultSalt = vaultData.subarray(0, SALT_LENGTH)
+
+      // 读取 recovery.key
+      const recoveryData = fs.readFileSync(recoveryKeyPath)
+      const iv = recoveryData.subarray(0, IV_LENGTH)
+      const tag = recoveryData.subarray(IV_LENGTH, IV_LENGTH + 16)
+      const encryptedMasterKey = recoveryData.subarray(IV_LENGTH + 16)
+
+      // 生成 recovery_key_enc
+      const recoveryKeyEnc = await this.deriveRecoveryKey(vaultSalt)
+
+      // 解密 masterKey
+      const decipher = crypto.createDecipheriv(ALGORITHM_GCM, recoveryKeyEnc, iv)
+      decipher.setAuthTag(tag)
+      const decryptedMasterKey = Buffer.concat([decipher.update(encryptedMasterKey), decipher.final()])
+
+      // 验证解密后的 masterKey 是否可以解密内容
+      // 尝试解密一个测试数据
+      const testData = crypto.randomBytes(32)
+      const testIv = crypto.randomBytes(IV_LENGTH)
+      const testCipher = crypto.createCipheriv(ALGORITHM_GCM, decryptedMasterKey, testIv)
+      const testEncrypted = Buffer.concat([testCipher.update(testData), testCipher.final()])
+      const testTag = testCipher.getAuthTag()
+
+      const testDecipher = crypto.createDecipheriv(ALGORITHM_GCM, decryptedMasterKey, testIv)
+      testDecipher.setAuthTag(testTag)
+      const testDecrypted = Buffer.concat([testDecipher.update(testEncrypted), testDecipher.final()])
+
+      return testDecrypted.equals(testData)
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * 使用 recovery key 重置密码
+   */
+  async resetPassword(recoveryKeyPath: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // 验证新密码
+      const passwordValidation = validatePassword(newPassword)
+      if (!passwordValidation.valid) {
+        return { success: false, error: passwordValidation.error }
+      }
+
+      if (!fs.existsSync(recoveryKeyPath)) {
+        return { success: false, error: '重置密钥文件不存在' }
+      }
+
+      const vaultPath = this.getVaultSaltPath()
+      if (!fs.existsSync(vaultPath)) {
+        return { success: false, error: '保险库文件不存在' }
+      }
+
+      // 读取 vault.salt 获取 vault_salt
+      const vaultData = fs.readFileSync(vaultPath)
+      const vaultSalt = vaultData.subarray(0, SALT_LENGTH)
+      const ivKey = vaultData.subarray(SALT_LENGTH + IV_LENGTH + 16 + 32, SALT_LENGTH + IV_LENGTH + 16 + 32 + 16)
+      const keyTag = vaultData.subarray(SALT_LENGTH + IV_LENGTH + 16 + 32 + 16, SALT_LENGTH + IV_LENGTH + 16 + 32 + 16 + 16)
+      const encryptedMasterKeyInVault = vaultData.subarray(SALT_LENGTH + IV_LENGTH + 16 + 32 + 16 + 16)
+
+      // 读取 recovery.key
+      const recoveryData = fs.readFileSync(recoveryKeyPath)
+      const ivRecovery = recoveryData.subarray(0, IV_LENGTH)
+      const tagRecovery = recoveryData.subarray(IV_LENGTH, IV_LENGTH + 16)
+      const encryptedMasterKeyRecovery = recoveryData.subarray(IV_LENGTH + 16)
+
+      // 生成 recovery_key_enc
+      const recoveryKeyEnc = await this.deriveRecoveryKey(vaultSalt)
+
+      // 解密 masterKey
+      const decipher = crypto.createDecipheriv(ALGORITHM_GCM, recoveryKeyEnc, ivRecovery)
+      decipher.setAuthTag(tagRecovery)
+      const masterKey = Buffer.concat([decipher.update(encryptedMasterKeyRecovery), decipher.final()])
+
+      // 验证 masterKey 是否可以解密 vault 中的 encrypted_masterKey
+      const keyDecipher = crypto.createDecipheriv(ALGORITHM_GCM, masterKey, ivKey)
+      keyDecipher.setAuthTag(keyTag)
+      const decryptedMasterKeyInVault = Buffer.concat([keyDecipher.update(encryptedMasterKeyInVault), keyDecipher.final()])
+
+      if (!decryptedMasterKeyInVault.equals(masterKey)) {
+        return { success: false, error: '重置密钥文件与保险库不匹配' }
+      }
+
+      // 验证成功，用新密码重新加密 masterKey
+      const newDerivedKey = await this.deriveKey(newPassword, vaultSalt)
+      const newTestVector = await this.computeTestVector(newDerivedKey, vaultSalt)
+
+      // 生成新的 iv 和 tag 用于加密 hash
+      const newIv = crypto.randomBytes(IV_LENGTH)
+      const newCipher = crypto.createCipheriv(ALGORITHM_GCM, newDerivedKey, newIv)
+      const newEncryptedHash = Buffer.concat([newCipher.update(newTestVector), newCipher.final()])
+      const newTag = newCipher.getAuthTag()
+
+      // 用新 derivedKey 加密原始 masterKey
+      const newIvKey = crypto.randomBytes(IV_LENGTH)
+      const newKeyCipher = crypto.createCipheriv(ALGORITHM_GCM, newDerivedKey, newIvKey)
+      const newEncryptedMasterKey = Buffer.concat([newKeyCipher.update(masterKey), newKeyCipher.final()])
+      const newKeyTag = newKeyCipher.getAuthTag()
+
+      // 写入新格式数据（保持 salt 不变）
+      const newData = Buffer.concat([vaultSalt, newIv, newTag, newEncryptedHash, newIvKey, newKeyTag, newEncryptedMasterKey])
+      fs.writeFileSync(vaultPath, newData)
+
+      // 更新内存中的 masterKey
+      this.masterKey = masterKey
+
+      return { success: true }
+    } catch (error) {
+      console.error('[ResetPassword] Error:', error)
+      return { success: false, error: '重置密码失败' }
+    }
+  }
+
+  /**
+   * 从 passphrase 和 salt 派生 recovery key
+   */
+  private async deriveRecoveryKey(salt: Buffer): Promise<Buffer> {
+    const passwordBuffer = Buffer.from(RECOVERY_PASSPHRASE, 'utf8')
+    const data = Buffer.concat([passwordBuffer, salt])
+    let hash = crypto.createHash('sha256').update(data).digest()
+    // 重复哈希 99999 次，总共 100000 次
+    for (let i = 1; i < 100000; i++) {
+      hash = crypto.createHash('sha256').update(hash).digest()
+    }
+    return hash
   }
 
   close(): void {

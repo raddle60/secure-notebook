@@ -45,6 +45,7 @@ interface Database {
   attachments: Attachment[]
   key_format_version?: number
   data_format_version?: number
+  recovery_key_gen_count?: number  // recovery.key 生成次数
 }
 
 export class DatabaseService {
@@ -482,6 +483,17 @@ export class DatabaseService {
     const note = this.getNoteById(noteId)
     if (!note) return []
     return this.getFolderPath(note.folder_id)
+  }
+
+  // Recovery key generation count
+  getRecoveryKeyGenCount(): number {
+    return this.db.recovery_key_gen_count ?? 0
+  }
+
+  incrementRecoveryKeyGenCount(): number {
+    this.db.recovery_key_gen_count = (this.db.recovery_key_gen_count ?? 0) + 1
+    this.save()
+    return this.db.recovery_key_gen_count
   }
 
   close(): void {

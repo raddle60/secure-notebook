@@ -80,7 +80,11 @@
         </div>
         <div class="setting-item">
           <span class="setting-label">密码</span>
-          <button class="setting-btn" @click="showChangePassword = true">修改密码</button>
+          <div class="password-actions">
+            <button class="setting-btn" @click="showChangePassword = true">修改密码</button>
+            <button class="setting-btn" @click="handleShowRecoveryKey">生成重置密钥文件</button>
+          </div>
+          <p v-if="recoveryKeyGenCount > 0" class="setting-hint">已生成 {{ recoveryKeyGenCount }} 次</p>
         </div>
         <div class="setting-item">
           <span class="setting-label">导出</span>
@@ -110,6 +114,14 @@
         v-if="showChangePassword"
         @close="showChangePassword = false"
       />
+
+      <!-- 重置密钥生成对话框 -->
+      <RecoveryKeyDialog
+        v-if="showRecoveryKeyDialog"
+        @close="showRecoveryKeyDialog = false"
+        @skipped="handleRecoveryKeySkipped"
+        @generated="handleRecoveryKeyGenerated"
+      />
     </div>
   </div>
 </template>
@@ -118,12 +130,15 @@
 import { ref, onMounted } from 'vue'
 import { useVault } from '../composables/useVault'
 import ChangePasswordDialog from './ChangePasswordDialog.vue'
+import RecoveryKeyDialog from './RecoveryKeyDialog.vue'
 import { getAvailableFonts } from '../utils/fontDetector'
 
 const emit = defineEmits<{ close: [] }>()
-const { lock } = useVault()
+const { lock, getRecoveryKeyGenCount } = useVault()
 
 const showChangePassword = ref(false)
+const showRecoveryKeyDialog = ref(false)
+const recoveryKeyGenCount = ref(0)
 const currentTheme = ref<'light' | 'dark'>('dark')
 const autoLockMinutes = ref(10)
 const fontFamily = ref('Consolas, "Courier New", monospace')
@@ -148,6 +163,8 @@ onMounted(async () => {
   if (fontFamily.value && !availableFonts.value.find(f => f.value === fontFamily.value)) {
     fontFamily.value = availableFonts.value[0]?.value || 'Consolas, "Courier New", monospace'
   }
+  // 加载重置密钥生成次数
+  recoveryKeyGenCount.value = await getRecoveryKeyGenCount()
 })
 
 async function updateCacheSize() {
@@ -176,6 +193,19 @@ async function updateEditorFont() {
 async function handleLock() {
   await lock()
   emit('close')
+}
+
+async function handleShowRecoveryKey() {
+  showRecoveryKeyDialog.value = true
+}
+
+function handleRecoveryKeySkipped() {
+  // 用户跳过生成，不更新计数
+}
+
+function handleRecoveryKeyGenerated() {
+  // 生成成功，更新计数显示
+  recoveryKeyGenCount.value++
 }
 
 async function handleExportVault() {
@@ -257,6 +287,18 @@ async function handleExportVault() {
 .setting-label {
   font-size: 14px;
   color: var(--text-primary);
+}
+
+.password-actions {
+  display: flex;
+  gap: 8px;
+  flex-direction: column;
+}
+
+.setting-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
 }
 
 .theme-selector {

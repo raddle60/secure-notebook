@@ -59,6 +59,10 @@
           <button type="submit" class="action-btn" :disabled="loading">
             {{ loading ? '解锁中...' : '打开记事本' }}
           </button>
+          <button type="button" class="reset-btn" @click="showResetPassword = true">
+            <span class="key-icon">🔑</span>
+            使用密钥文件重置密码
+          </button>
         </form>
       </div>
 
@@ -106,6 +110,13 @@
         <span class="svg-icon svg-back"></span>
         <span>选择其他目录</span>
       </button>
+
+      <!-- 重置密码对话框 -->
+      <ResetPasswordDialog
+        v-if="showResetPassword"
+        @close="showResetPassword = false"
+        @success="handleResetSuccess"
+      />
     </div>
   </div>
 </template>
@@ -113,6 +124,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useVault } from '../composables/useVault'
+import ResetPasswordDialog from './ResetPasswordDialog.vue'
 
 const api = window.vaultAPI
 const { openVault, createVault, isUnlocked } = useVault()
@@ -134,6 +146,9 @@ const passwordRules = ref({
 
 // vaultState: 'select' | 'existing' | 'new'
 const vaultState = ref<'select' | 'existing' | 'new'>('select')
+
+// 重置密码对话框
+const showResetPassword = ref(false)
 
 onMounted(async () => {
   // 获取最近目录
@@ -268,6 +283,13 @@ function goBack() {
   confirmPassword.value = ''
   error.value = ''
   passwordRules.value = { valid: false, length: false, hasLetter: false, hasNumber: false }
+}
+
+function handleResetSuccess() {
+  // 重置成功后，清空密码输入框
+  password.value = ''
+  confirmPassword.value = ''
+  error.value = ''
 }
 
 // 监听锁定事件，清空密码
@@ -610,6 +632,31 @@ h1 {
 
 .action-btn:disabled {
   opacity: 0.6;
+}
+
+.reset-btn {
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.reset-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.key-icon {
+  font-size: 14px;
 }
 
 .back-btn {

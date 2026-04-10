@@ -87,6 +87,13 @@ const api = {
     openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
     openFolder: (folderPath: string) => ipcRenderer.invoke('app:openFolder', folderPath)
   },
+  recovery: {
+    getGenCount: () => ipcRenderer.invoke('recovery:getGenCount'),
+    generate: (saveDir: string) => ipcRenderer.invoke('recovery:generate', saveDir),
+    verify: (recoveryKeyPath: string) => ipcRenderer.invoke('recovery:verify', recoveryKeyPath),
+    reset: (recoveryKeyPath: string, newPassword: string) => ipcRenderer.invoke('recovery:reset', recoveryKeyPath, newPassword),
+    selectSaveDir: () => ipcRenderer.invoke('recovery:selectSavePath')
+  },
   onVaultLocked: (callback: () => void) => {
     ipcRenderer.on('vault:locked', callback)
     return () => ipcRenderer.removeListener('vault:locked', callback)
