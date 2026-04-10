@@ -13,7 +13,7 @@
           </p>
           <ul class="info-list">
             <li>此文件用于忘记密码时重置密码</li>
-            <li>请将文件保存到 <strong>U 盘或云盘</strong> 等安全位置</li>
+            <li>请将文件保存到安全位置， <strong>防止密钥泄露</strong></li>
             <li><strong>不要</strong> 与数据目录放在同一位置</li>
             <li>这是第 <span class="count-highlight">{{ genCount + 1 }}</span> 次生成</li>
           </ul>

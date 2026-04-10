@@ -80,6 +80,42 @@
             <li :class="{ valid: passwordRules.hasNumber, invalid: !passwordRules.hasNumber && password }">包含至少一个数字</li>
           </ul>
         </div>
+
+        <!-- 重置密钥文件选项 -->
+        <div class="recovery-key-option">
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              v-model="wantRecoveryKey"
+              @change="toggleRecoveryKeyOption"
+            />
+            <span>生成重置密钥文件（忘记密码时使用）</span>
+          </label>
+
+          <div v-if="wantRecoveryKey" class="recovery-key-details">
+            <div class="recovery-warning">
+              <span class="warning-icon">⚠️</span>
+              <p><strong>重要提示：</strong>重置密钥文件必须保存在<strong>数据目录之外</strong>的安全位置，<strong>避免密钥泄露</strong></p>
+            </div>
+            <div class="recovery-dir-select">
+              <p class="recovery-dir-label">选择保存目录：</p>
+              <div class="recovery-dir-row">
+                <input
+                  v-model="recoverySaveDir"
+                  type="text"
+                  placeholder="请选择保存目录..."
+                  class="recovery-dir-input"
+                  readonly
+                />
+                <button class="recovery-browse-btn" @click="selectRecoveryDir" :disabled="creating">
+                  浏览
+                </button>
+              </div>
+              <p class="recovery-file-hint">文件名：{{ recoveryFilename }}</p>
+            </div>
+          </div>
+        </div>
+
         <form @submit.prevent="handleCreate">
           <input
             v-model="password"
@@ -114,6 +150,7 @@
       <!-- 重置密码对话框 -->
       <ResetPasswordDialog
         v-if="showResetPassword"
+        :vault-dir="selectedDir"
         @close="showResetPassword = false"
         @success="handleResetSuccess"
       />
@@ -122,12 +159,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useVault } from '../composables/useVault'
 import ResetPasswordDialog from './ResetPasswordDialog.vue'
 
 const api = window.vaultAPI
-const { openVault, createVault, isUnlocked } = useVault()
+const { openVault, createVault, isUnlocked, selectRecoveryKeySaveDir } = useVault()
 
 const selectedDir = ref('')
 const password = ref('')
@@ -150,6 +187,12 @@ const vaultState = ref<'select' | 'existing' | 'new'>('select')
 // 重置密码对话框
 const showResetPassword = ref(false)
 
+// 重置密钥文件选项（仅新建笔记目录时）
+const wantRecoveryKey = ref(false)
+const recoverySaveDir = ref('')
+const creating = ref(false)
+const recoveryKeyGenCount = ref(0)
+
 onMounted(async () => {
   // 获取最近目录
   recentDirs.value = await api.vault.getRecentDirs()
@@ -163,6 +206,9 @@ onMounted(async () => {
       vaultState.value = 'existing'
     }
   }
+
+  // 获取重置密钥生成次数
+  recoveryKeyGenCount.value = await api.recovery.getGenCount()
 })
 
 async function browseDirectory() {
@@ -259,21 +305,38 @@ async function handleCreate() {
     error.value = '两次密码不一致'
     return
   }
+  // 如果勾选了生成重置密钥文件，检查是否选择了保存目录
+  if (wantRecoveryKey.value && !recoverySaveDir.value) {
+    error.value = '请选择重置密钥文件的保存目录'
+    return
+  }
 
-  loading.value = true
+  creating.value = true
   try {
     const result = await createVault(selectedDir.value, password.value)
     if (!result.success) {
       error.value = result.error || '创建失败'
     } else {
-      // 创建成功后清空密码
+      // 创建成功后，生成重置密钥文件（如果用户勾选了）
+      if (wantRecoveryKey.value && recoverySaveDir.value) {
+        try {
+          const genResult = await api.recovery.generate(recoverySaveDir.value)
+          if (!genResult.success) {
+            console.warn('[UnlockScreen] 重置密钥文件生成失败:', genResult.error)
+            // 不阻止流程，只是警告
+          }
+        } catch (e) {
+          console.warn('[UnlockScreen] 重置密钥文件生成异常:', e)
+        }
+      }
+      // 清空密码
       password.value = ''
       confirmPassword.value = ''
     }
   } catch (e) {
     error.value = '创建失败'
   } finally {
-    loading.value = false
+    creating.value = false
   }
 }
 
@@ -283,7 +346,31 @@ function goBack() {
   confirmPassword.value = ''
   error.value = ''
   passwordRules.value = { valid: false, length: false, hasLetter: false, hasNumber: false }
+  wantRecoveryKey.value = false
+  recoverySaveDir.value = ''
 }
+
+function toggleRecoveryKeyOption() {
+  // 切换选项时的处理
+}
+
+async function selectRecoveryDir() {
+  const dir = await selectRecoveryKeySaveDir()
+  if (dir) {
+    recoverySaveDir.value = dir
+  }
+}
+
+const recoveryFilename = computed(() => {
+  const now = new Date()
+  const timestamp = now.getFullYear().toString() +
+    String(now.getMonth() + 1).padStart(2, '0') +
+    String(now.getDate()).padStart(2, '0') +
+    String(now.getHours()).padStart(2, '0') +
+    String(now.getMinutes()).padStart(2, '0') +
+    String(now.getSeconds()).padStart(2, '0')
+  return `recovery_${timestamp}_${recoveryKeyGenCount.value + 1}.key`
+})
 
 function handleResetSuccess() {
   // 重置成功后，清空密码输入框
@@ -696,5 +783,188 @@ h1 {
   color: var(--danger-color);
   font-size: 13px;
   margin-bottom: 8px;
+}
+
+/* 重置密钥文件选项 */
+.recovery-key-option {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--bg-primary);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.checkbox-label input[type="checkbox"]:hover {
+  border-color: var(--accent-color);
+}
+
+.checkbox-label input[type="checkbox"]:checked {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.checkbox-label input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* 暗色主题样式 */
+:root[data-theme='dark'] .checkbox-label input[type="checkbox"] {
+  border-color: var(--text-secondary);
+  background: var(--bg-secondary);
+}
+
+:root[data-theme='dark'] .checkbox-label input[type="checkbox"]:hover {
+  border-color: var(--bg-selected);
+}
+
+:root[data-theme='dark'] .checkbox-label input[type="checkbox"]:checked {
+  background: var(--bg-selected);
+  border-color: var(--bg-selected);
+}
+
+.checkbox-label input[type="checkbox"]:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+:root[data-theme='dark'] .checkbox-label input[type="checkbox"]:focus {
+  outline-color: var(--bg-selected);
+}
+
+.recovery-key-details {
+  margin-top: 16px;
+}
+
+.recovery-warning {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(var(--danger-rgb, 239, 68, 68), 0.1);
+  border-radius: 4px;
+  border-left: 3px solid var(--danger-color);
+  margin-bottom: 12px;
+}
+
+.warning-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.recovery-warning p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.recovery-warning strong {
+  color: var(--danger-color);
+}
+
+.recovery-dir-select {
+  padding: 12px;
+  background: var(--bg-primary);
+  border-radius: 4px;
+}
+
+.recovery-dir-label {
+  font-size: 13px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.recovery-dir-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.recovery-dir-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 13px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.recovery-dir-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+/* 暗色主题下使用更柔和的聚焦边框 */
+:root[data-theme='dark'] .recovery-dir-input:focus {
+  border-color: var(--bg-selected);
+}
+
+.recovery-browse-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.recovery-browse-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+/* 暗色主题下使用不同的边框颜色 */
+:root[data-theme='dark'] .recovery-browse-btn:hover:not(:disabled) {
+  border-color: var(--bg-selected);
+}
+
+.recovery-browse-btn:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+:root[data-theme='dark'] .recovery-browse-btn:focus {
+  border-color: var(--bg-selected);
+}
+
+.recovery-browse-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.recovery-file-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: 'Consolas', 'Monaco', monospace;
 }
 </style>

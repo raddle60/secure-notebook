@@ -90,8 +90,8 @@ const api = {
   recovery: {
     getGenCount: () => ipcRenderer.invoke('recovery:getGenCount'),
     generate: (saveDir: string) => ipcRenderer.invoke('recovery:generate', saveDir),
-    verify: (recoveryKeyPath: string) => ipcRenderer.invoke('recovery:verify', recoveryKeyPath),
-    reset: (recoveryKeyPath: string, newPassword: string) => ipcRenderer.invoke('recovery:reset', recoveryKeyPath, newPassword),
+    verify: (recoveryKeyPath: string, vaultDir: string) => ipcRenderer.invoke('recovery:verify', recoveryKeyPath, vaultDir),
+    reset: (recoveryKeyPath: string, newPassword: string, vaultDir: string) => ipcRenderer.invoke('recovery:reset', recoveryKeyPath, newPassword, vaultDir),
     selectSaveDir: () => ipcRenderer.invoke('recovery:selectSavePath')
   },
   onVaultLocked: (callback: () => void) => {

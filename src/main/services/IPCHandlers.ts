@@ -614,12 +614,14 @@ export function registerIPCHandlers(): void {
     }
   })
 
-  ipcMain.handle('recovery:verify', async (_, recoveryKeyPath: string) => {
+  ipcMain.handle('recovery:verify', async (_, recoveryKeyPath: string, vaultDir: string) => {
+    cryptoService.setVaultPath(vaultDir)
     const valid = await cryptoService.verifyRecoveryKey(recoveryKeyPath)
     return { valid }
   })
 
-  ipcMain.handle('recovery:reset', async (_, recoveryKeyPath: string, newPassword: string) => {
+  ipcMain.handle('recovery:reset', async (_, recoveryKeyPath: string, newPassword: string, vaultDir: string) => {
+    cryptoService.setVaultPath(vaultDir)
     const result = await cryptoService.resetPassword(recoveryKeyPath, newPassword)
     return result
   })

@@ -149,6 +149,10 @@
 import { ref, computed } from 'vue'
 import { useVault } from '../composables/useVault'
 
+const props = defineProps<{
+  vaultDir: string
+}>()
+
 const emit = defineEmits<{ close: []; success: [] }>()
 const { verifyRecoveryKey, resetPassword } = useVault()
 
@@ -208,15 +212,14 @@ async function goToStep2() {
   verificationSuccess.value = false
   verificationFailed.value = false
   verifyError.value = ''
-
+  step.value = 2
   try {
-    const result = await verifyRecoveryKey(recoveryKeyPath.value)
+    const result = await verifyRecoveryKey(recoveryKeyPath.value, props.vaultDir)
     if (result.valid) {
       verificationSuccess.value = true
-      step.value = 2
     } else {
       verificationFailed.value = true
-      verifyError.value = '重置密钥文件无效或与保险库不匹配'
+      verifyError.value = '重置密钥文件无效或与笔记目录不匹配'
     }
   } catch (e: any) {
     verificationFailed.value = true
@@ -250,7 +253,7 @@ async function goToStep4() {
   error.value = ''
 
   try {
-    const result = await resetPassword(recoveryKeyPath.value, newPassword.value)
+    const result = await resetPassword(recoveryKeyPath.value, newPassword.value, props.vaultDir)
     if (result.success) {
       resetSuccess.value = true
       step.value = 4
@@ -269,7 +272,7 @@ async function goToStep4() {
 function retryStep() {
   if (step.value === 2 && verificationFailed.value) {
     verificationFailed.value = false
-    goToStep2()
+    prevStep()
   } else if (step.value === 4 && resetFailed.value) {
     resetFailed.value = false
     goToStep4()
@@ -355,6 +358,16 @@ function handleComplete() {
   font-size: 13px;
   background: var(--bg-secondary);
   color: var(--text-primary);
+}
+
+.file-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+/* 暗色主题下使用更柔和的聚焦边框 */
+:root[data-theme='dark'] .file-input:focus {
+  border-color: var(--bg-selected);
 }
 
 .browse-btn {

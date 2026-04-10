@@ -137,8 +137,8 @@ declare global {
       recovery: {
         getGenCount: () => Promise<number>
         generate: (saveDir: string) => Promise<{ success: boolean; filename?: string; error?: string }>
-        verify: (recoveryKeyPath: string) => Promise<{ valid: boolean }>
-        reset: (recoveryKeyPath: string, newPassword: string) => Promise<{ success: boolean; error?: string }>
+        verify: (recoveryKeyPath: string, vaultDir: string) => Promise<{ valid: boolean }>
+        reset: (recoveryKeyPath: string, newPassword: string, vaultDir: string) => Promise<{ success: boolean; error?: string }>
         selectSaveDir: () => Promise<string | null>
       }
       onVaultLocked: (callback: () => void) => () => void
@@ -336,12 +336,12 @@ export function useVault() {
     return await api.recovery.generate(savePath)
   }
 
-  async function verifyRecoveryKey(recoveryKeyPath: string): Promise<{ valid: boolean }> {
-    return await api.recovery.verify(recoveryKeyPath)
+  async function verifyRecoveryKey(recoveryKeyPath: string, vaultDir: string): Promise<{ valid: boolean }> {
+    return await api.recovery.verify(recoveryKeyPath, vaultDir)
   }
 
-  async function resetPassword(recoveryKeyPath: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
-    return await api.recovery.reset(recoveryKeyPath, newPassword)
+  async function resetPassword(recoveryKeyPath: string, newPassword: string, vaultDir: string): Promise<{ success: boolean; error?: string }> {
+    return await api.recovery.reset(recoveryKeyPath, newPassword, vaultDir)
   }
 
   async function selectRecoveryKeySaveDir(): Promise<string | null> {

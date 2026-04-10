@@ -387,11 +387,13 @@ export class CryptoService {
    */
   async verifyRecoveryKey(recoveryKeyPath: string): Promise<boolean> {
     try {
+      console.log(recoveryKeyPath)
       if (!fs.existsSync(recoveryKeyPath)) {
         return false
       }
 
       const vaultPath = this.getVaultSaltPath()
+      console.log(vaultPath)
       if (!fs.existsSync(vaultPath)) {
         return false
       }
@@ -443,23 +445,17 @@ export class CryptoService {
         return { success: false, error: passwordValidation.error }
       }
 
-      if (!fs.existsSync(recoveryKeyPath)) {
-        return { success: false, error: '重置密钥文件不存在' }
+      // 验证 recovery key 是否有效
+      const isValid = await this.verifyRecoveryKey(recoveryKeyPath)
+      if (!isValid) {
+        return { success: false, error: '重置密钥文件无效或与笔记目录不匹配' }
       }
 
       const vaultPath = this.getVaultSaltPath()
-      if (!fs.existsSync(vaultPath)) {
-        return { success: false, error: '保险库文件不存在' }
-      }
-
-      // 读取 vault.salt 获取 vault_salt
       const vaultData = fs.readFileSync(vaultPath)
       const vaultSalt = vaultData.subarray(0, SALT_LENGTH)
-      const ivKey = vaultData.subarray(SALT_LENGTH + IV_LENGTH + 16 + 32, SALT_LENGTH + IV_LENGTH + 16 + 32 + 16)
-      const keyTag = vaultData.subarray(SALT_LENGTH + IV_LENGTH + 16 + 32 + 16, SALT_LENGTH + IV_LENGTH + 16 + 32 + 16 + 16)
-      const encryptedMasterKeyInVault = vaultData.subarray(SALT_LENGTH + IV_LENGTH + 16 + 32 + 16 + 16)
 
-      // 读取 recovery.key
+      // 读取 recovery.key 获取 masterKey
       const recoveryData = fs.readFileSync(recoveryKeyPath)
       const ivRecovery = recoveryData.subarray(0, IV_LENGTH)
       const tagRecovery = recoveryData.subarray(IV_LENGTH, IV_LENGTH + 16)
@@ -473,16 +469,7 @@ export class CryptoService {
       decipher.setAuthTag(tagRecovery)
       const masterKey = Buffer.concat([decipher.update(encryptedMasterKeyRecovery), decipher.final()])
 
-      // 验证 masterKey 是否可以解密 vault 中的 encrypted_masterKey
-      const keyDecipher = crypto.createDecipheriv(ALGORITHM_GCM, masterKey, ivKey)
-      keyDecipher.setAuthTag(keyTag)
-      const decryptedMasterKeyInVault = Buffer.concat([keyDecipher.update(encryptedMasterKeyInVault), keyDecipher.final()])
-
-      if (!decryptedMasterKeyInVault.equals(masterKey)) {
-        return { success: false, error: '重置密钥文件与保险库不匹配' }
-      }
-
-      // 验证成功，用新密码重新加密 masterKey
+      // 用新密码重新加密 masterKey
       const newDerivedKey = await this.deriveKey(newPassword, vaultSalt)
       const newTestVector = await this.computeTestVector(newDerivedKey, vaultSalt)
 
