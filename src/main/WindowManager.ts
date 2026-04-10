@@ -1,8 +1,21 @@
-import { BrowserWindow, app, globalShortcut } from 'electron'
+import { BrowserWindow, app, globalShortcut, session, Session } from 'electron'
 import path from 'path'
+import crypto from 'crypto'
 
 export class WindowManager {
   private static mainWindow: BrowserWindow | null = null
+  // 随机生成的 partition ID（仅内存，不带 persist: 前缀）
+  private static partitionId: string = `partition-${crypto.randomBytes(16).toString('hex')}`
+  private static partition: Session | null = null
+
+  // 获取或创建 partition
+  private static getPartition(): Session {
+    if (!this.partition && this.partitionId) {
+      // 使用自定义 partition，数据仅存在于内存
+      this.partition = session.fromPartition(this.partitionId)
+    }
+    return this.partition || session.defaultSession
+  }
 
   static createMainWindow(): BrowserWindow {
     const isDev = !app.isPackaged
@@ -10,6 +23,9 @@ export class WindowManager {
     if(!isDev){
       icon_path = path.join(__dirname, '../../../app.asar.unpacked/resources/icon.ico')
     }
+
+    // 获取自定义 partition（用于多实例隔离）
+    const partition = this.getPartition()
 
     this.mainWindow = new BrowserWindow({
       width: 1200,
@@ -23,7 +39,8 @@ export class WindowManager {
         preload: path.join(__dirname, '../preload/preload.js'),
         contextIsolation: true,
         nodeIntegration: false,
-        sandbox: false
+        sandbox: false,
+        session: partition  // 使用自定义 partition
       },
       show: false
     })
