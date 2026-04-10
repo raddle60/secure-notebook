@@ -151,17 +151,20 @@ export class CryptoService {
     const encryptedHash = Buffer.concat([cipher.update(testVector), cipher.final()])
     const tag = cipher.getAuthTag()
 
-    // 用 derivedKey 加密 derivedKey 本身（用于后续密码修改）
+    // 生成随机的 masterKey（用于加密/解密内容）
+    const masterKey = crypto.randomBytes(KEY_LENGTH)
+
+    // 用 derivedKey 加密 masterKey（用于后续密码验证和修改）
     const ivKey = crypto.randomBytes(IV_LENGTH)
     const keyCipher = crypto.createCipheriv(ALGORITHM_GCM, derivedKey, ivKey)
-    const encryptedMasterKey = Buffer.concat([keyCipher.update(derivedKey), keyCipher.final()])
+    const encryptedMasterKey = Buffer.concat([keyCipher.update(masterKey), keyCipher.final()])
     const keyTag = keyCipher.getAuthTag()
 
     // 新格式：salt (16) + iv_hash (16) + tag_hash (16) + encrypted_hash (32) + iv_key (16) + tag_key (16) + encrypted_masterKey (32) = 144
     const data = Buffer.concat([salt, iv, tag, encryptedHash, ivKey, keyTag, encryptedMasterKey])
     writeFileSyncAtomic(this.getVaultSaltPath(), data)
 
-    this.masterKey = derivedKey
+    this.masterKey = masterKey
   }
 
   async unlock(password: string): Promise<boolean> {
