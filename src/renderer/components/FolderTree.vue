@@ -155,8 +155,12 @@ function openNewSubFolderDialog(parentFolder: any) {
   newFolderDialogVisible.value = true
 }
 
-function handleNewFolderConfirm(name: string) {
-  create(newFolderParentId.value, name)
+async function handleNewFolderConfirm(name: string) {
+  const folder = await create(newFolderParentId.value, name)
+  // 只有当这是唯一一个文件夹时才自动选中
+  if (folder && folder.id && folders.value.length === 1) {
+    await selectFolder(folder.id)
+  }
 }
 
 function handleNewNoteConfirm(data: { title: string; format: string }) {
