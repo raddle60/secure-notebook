@@ -105,16 +105,36 @@ export class CryptoService {
   }
 
   /**
-   * 删除锁文件
+   * 删除锁文件（仅删除自己持有的锁或已过期的锁）
    */
   private deleteLockFile(): void {
     const lockFilePath = this.getLockFilePath()
-    if (fs.existsSync(lockFilePath)) {
-      try {
+    if (!fs.existsSync(lockFilePath)) {
+      return
+    }
+    try {
+      const content = fs.readFileSync(lockFilePath, 'utf8').trim()
+      const pid = parseInt(content, 10)
+      if (isNaN(pid)) {
+        // 无效 PID，直接删除
         fs.unlinkSync(lockFilePath)
-      } catch {
-        // 忽略删除失败
+        return
       }
+      if (pid === this.getCurrentPid()) {
+        // 自己持有的锁，删除
+        fs.unlinkSync(lockFilePath)
+        return
+      }
+      // 其他进程的锁，检查进程是否还存在
+      try {
+        process.kill(pid, 0)
+        // 进程存在，不删除
+      } catch {
+        // 进程已不存在，清理 stale 锁文件
+        fs.unlinkSync(lockFilePath)
+      }
+    } catch {
+      // 忽略读取或删除失败
     }
   }
 
