@@ -626,6 +626,10 @@ export function registerIPCHandlers(): void {
     }
   })
 
+  ipcMain.handle('recovery:hasNote', async (_, vaultDir: string) => {
+    return databaseService.hasNoteForReset(vaultDir)
+  })
+
   ipcMain.handle('recovery:verify', async (_, recoveryKeyPath: string, vaultDir: string) => {
     cryptoService.setVaultPath(vaultDir)
     const valid = await cryptoService.verifyRecoveryKey(recoveryKeyPath)

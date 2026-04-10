@@ -94,6 +94,7 @@ const api = {
     generate: (saveDir: string) => ipcRenderer.invoke('recovery:generate', saveDir),
     verify: (recoveryKeyPath: string, vaultDir: string) => ipcRenderer.invoke('recovery:verify', recoveryKeyPath, vaultDir),
     reset: (recoveryKeyPath: string, newPassword: string, vaultDir: string) => ipcRenderer.invoke('recovery:reset', recoveryKeyPath, newPassword, vaultDir),
+    hasNote: (vaultDir: string) => ipcRenderer.invoke('recovery:hasNote', vaultDir),
     selectSaveDir: () => ipcRenderer.invoke('recovery:selectSavePath')
   },
   onVaultLocked: (callback: () => void) => {

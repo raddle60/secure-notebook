@@ -497,6 +497,29 @@ export class DatabaseService {
     return this.db.recovery_key_gen_count
   }
 
+  /**
+   * 检查指定目录中是否有可用的笔记（用于重置密码验证）
+   * @param vaultDir 金库目录路径
+   * @returns 如果有非删除的笔记返回 true，否则返回 false
+   */
+  hasNoteForReset(vaultDir: string): boolean {
+    const metadataPath = path.join(vaultDir, 'metadata.json')
+    if (!fs.existsSync(metadataPath)) {
+      return false
+    }
+
+    try {
+      const data = fs.readFileSync(metadataPath, 'utf-8')
+      const db = JSON.parse(data)
+      const notes = db.notes || []
+
+      // 检查是否有非删除的笔记
+      return notes.some((n: Note) => n.deleted_at === null)
+    } catch {
+      return false
+    }
+  }
+
   close(): void {
     this.save()
   }

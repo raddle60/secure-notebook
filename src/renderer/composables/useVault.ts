@@ -142,6 +142,7 @@ declare global {
         generate: (saveDir: string) => Promise<{ success: boolean; filename?: string; error?: string }>
         verify: (recoveryKeyPath: string, vaultDir: string) => Promise<{ valid: boolean }>
         reset: (recoveryKeyPath: string, newPassword: string, vaultDir: string) => Promise<{ success: boolean; error?: string }>
+        hasNote: (vaultDir: string) => Promise<boolean>
         selectSaveDir: () => Promise<string | null>
       }
       onVaultLocked: (callback: () => void) => () => void
@@ -351,6 +352,10 @@ export function useVault() {
     return await api.recovery.reset(recoveryKeyPath, newPassword, vaultDir)
   }
 
+  async function hasNoteForReset(vaultDir: string): Promise<boolean> {
+    return await api.recovery.hasNote(vaultDir)
+  }
+
   async function selectRecoveryKeySaveDir(): Promise<string | null> {
     return await api.recovery.selectSaveDir()
   }
@@ -553,6 +558,7 @@ export function useVault() {
     generateRecoveryKey,
     verifyRecoveryKey,
     resetPassword,
+    hasNoteForReset,
     selectRecoveryKeySaveDir,
     loadFolders,
     refreshNotes,

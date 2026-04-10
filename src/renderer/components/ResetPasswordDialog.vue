@@ -156,7 +156,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ close: []; success: [] }>()
-const { verifyRecoveryKey, resetPassword, getNoteCount } = useVault()
+const { verifyRecoveryKey, resetPassword, hasNoteForReset } = useVault()
 
 const step = ref(1)
 const recoveryKeyPath = ref('')
@@ -218,8 +218,8 @@ async function goToStep2() {
   step.value = 2
 
   try {
-    const noteCount = await getNoteCount()
-    if (noteCount === 0) {
+    const hasNote = await hasNoteForReset(props.vaultDir)
+    if (!hasNote) {
       verificationFailed.value = true
       verifyError.value = '笔记目录中笔记条数为0，无法验证重置密钥'
       return
