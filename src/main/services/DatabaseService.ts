@@ -1,6 +1,7 @@
 import path from 'path'
 import fs from 'fs'
 import { app } from 'electron'
+import { writeFileSyncAtomic } from '../utils/fileUtils'
 
 // 常量：密钥格式版本和数据格式版本
 export const KEY_FORMAT_VERSION = 2
@@ -90,7 +91,7 @@ export class DatabaseService {
     if (this.db.data_format_version === undefined) {
       this.db.data_format_version = DATA_FORMAT_VERSION
     }
-    fs.writeFileSync(this.dbPath, JSON.stringify(this.db, null, 2))
+    writeFileSyncAtomic(this.dbPath, JSON.stringify(this.db, null, 2))
   }
 
   // Folder operations

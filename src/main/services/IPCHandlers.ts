@@ -8,6 +8,7 @@ import { vaultService } from './VaultService'
 import { recycleService } from './RecycleService'
 import { settingsService } from './SettingsService'
 import { v4 as uuidv4 } from 'uuid'
+import { writeFileSyncAtomic } from '../utils/fileUtils'
 
 // Encrypt a string using cryptoService
 function encryptText(text: string): string {
@@ -617,7 +618,7 @@ export function registerIPCHandlers(): void {
     try {
       const { data, filename } = await cryptoService.generateRecoveryKey()
       const fullPath = path.join(saveDir, filename)
-      fs.writeFileSync(fullPath, data)
+      writeFileSyncAtomic(fullPath, data)
       return { success: true, filename, fullPath }
     } catch (error) {
       console.error('[Recovery:generate] Error:', error)

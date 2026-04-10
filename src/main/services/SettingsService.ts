@@ -1,6 +1,7 @@
 import path from 'path'
 import fs from 'fs'
 import { app } from 'electron'
+import { writeFileSyncAtomic } from '../utils/fileUtils'
 
 export interface AppSettings {
   // 分割栏位置
@@ -108,7 +109,7 @@ export class SettingsService {
 
   private save(): void {
     try {
-      fs.writeFileSync(this.settingsPath, JSON.stringify(this.settings, null, 2))
+      writeFileSyncAtomic(this.settingsPath, JSON.stringify(this.settings, null, 2))
     } catch (e) {
       console.error('[Settings] Error saving settings:', e)
     }

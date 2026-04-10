@@ -4,6 +4,7 @@ import { app } from 'electron'
 import { cryptoService } from './CryptoService'
 import { databaseService } from './DatabaseService'
 import { v4 as uuidv4 } from 'uuid'
+import { writeFileSyncAtomic } from '../utils/fileUtils'
 
 export class VaultService {
   private currentVaultPath: string = ''
@@ -64,7 +65,7 @@ export class VaultService {
   saveContent(noteId: string, content: string): void {
     const filePath = this.getContentPath(noteId)
     const encrypted = cryptoService.encryptContent(content)
-    fs.writeFileSync(filePath, encrypted)
+    writeFileSyncAtomic(filePath, encrypted)
   }
 
   loadContent(noteId: string): string {

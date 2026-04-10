@@ -4,6 +4,7 @@ import path from 'path'
 import { app } from 'electron'
 import argon2 from 'argon2'
 import { databaseService } from './DatabaseService'
+import { writeFileSyncAtomic } from '../utils/fileUtils'
 
 // 常量：密钥格式版本和数据格式版本
 export const KEY_FORMAT_VERSION = 2
@@ -158,7 +159,7 @@ export class CryptoService {
 
     // 新格式：salt (16) + iv_hash (16) + tag_hash (16) + encrypted_hash (32) + iv_key (16) + tag_key (16) + encrypted_masterKey (32) = 144
     const data = Buffer.concat([salt, iv, tag, encryptedHash, ivKey, keyTag, encryptedMasterKey])
-    fs.writeFileSync(this.getVaultSaltPath(), data)
+    writeFileSyncAtomic(this.getVaultSaltPath(), data)
 
     this.masterKey = derivedKey
   }
@@ -246,7 +247,7 @@ export class CryptoService {
     const encrypted = Buffer.concat([cipher.update(input), cipher.final()])
     const tag = cipher.getAuthTag()
     const output = Buffer.concat([iv, tag, encrypted])
-    fs.writeFileSync(outputPath, output)
+    writeFileSyncAtomic(outputPath, output)
   }
 
   decryptFile(encryptedPath: string): Buffer {
@@ -341,7 +342,7 @@ export class CryptoService {
 
     // 写入新格式数据
     const newData = Buffer.concat([salt, newIv, newTag, newEncryptedHash, newIvKey, newKeyTag, newEncryptedMasterKey])
-    fs.writeFileSync(vaultPath, newData)
+    writeFileSyncAtomic(vaultPath, newData)
 
     // masterKey 保持不变（仍然是原始的首次派生密钥）
     return { success: true }
@@ -535,7 +536,7 @@ export class CryptoService {
 
       // 写入新格式数据（保持 salt 不变）
       const newData = Buffer.concat([vaultSalt, newIv, newTag, newEncryptedHash, newIvKey, newKeyTag, newEncryptedMasterKey])
-      fs.writeFileSync(vaultPath, newData)
+      writeFileSyncAtomic(vaultPath, newData)
 
       // 更新内存中的 masterKey
       this.masterKey = masterKey
