@@ -237,6 +237,11 @@ export function registerIPCHandlers(): void {
     }))
   })
 
+  ipcMain.handle('notes:count', () => {
+    // 返回非删除的笔记数量
+    return databaseService.db.notes.filter(n => n.deleted_at === null).length
+  })
+
   ipcMain.handle('notes:get', (_, id: string) => {
     const note = databaseService.getNoteById(id)
     if (!note) return null

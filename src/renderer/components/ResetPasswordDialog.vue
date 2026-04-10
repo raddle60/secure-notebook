@@ -154,7 +154,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ close: []; success: [] }>()
-const { verifyRecoveryKey, resetPassword } = useVault()
+const { verifyRecoveryKey, resetPassword, getNoteCount } = useVault()
 
 const step = ref(1)
 const recoveryKeyPath = ref('')
@@ -208,12 +208,22 @@ async function selectRecoveryKey() {
 async function goToStep2() {
   if (!recoveryKeyPath.value) return
 
+  // 步骤 2.1: 先验证笔记条数是否大于 0
   verifying.value = true
   verificationSuccess.value = false
   verificationFailed.value = false
   verifyError.value = ''
   step.value = 2
+
   try {
+    const noteCount = await getNoteCount()
+    if (noteCount === 0) {
+      verificationFailed.value = true
+      verifyError.value = '笔记目录中笔记条数为0，无法验证重置密钥'
+      return
+    }
+
+    // 步骤 2.2: 验证重置密钥文件
     const result = await verifyRecoveryKey(recoveryKeyPath.value, props.vaultDir)
     if (result.valid) {
       verificationSuccess.value = true

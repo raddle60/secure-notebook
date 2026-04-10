@@ -389,16 +389,15 @@ export class CryptoService {
 
   /**
    * 验证 recovery key 文件是否有效
+   * 通过解密任意一个笔记的标题来验证 masterKey 是否正确
    */
   async verifyRecoveryKey(recoveryKeyPath: string): Promise<boolean> {
     try {
-      console.log(recoveryKeyPath)
       if (!fs.existsSync(recoveryKeyPath)) {
         return false
       }
 
       const vaultPath = this.getVaultSaltPath()
-      console.log(vaultPath)
       if (!fs.existsSync(vaultPath)) {
         return false
       }
@@ -421,19 +420,63 @@ export class CryptoService {
       decipher.setAuthTag(tag)
       const decryptedMasterKey = Buffer.concat([decipher.update(encryptedMasterKey), decipher.final()])
 
-      // 验证解密后的 masterKey 是否可以解密内容
-      // 尝试解密一个测试数据
-      const testData = crypto.randomBytes(32)
-      const testIv = crypto.randomBytes(IV_LENGTH)
-      const testCipher = crypto.createCipheriv(ALGORITHM_GCM, decryptedMasterKey, testIv)
-      const testEncrypted = Buffer.concat([testCipher.update(testData), testCipher.final()])
-      const testTag = testCipher.getAuthTag()
+      // 读取 metadata.json 获取笔记列表
+      const metadataPath = path.join(path.dirname(vaultPath), 'metadata.json')
+      if (!fs.existsSync(metadataPath)) {
+        return false
+      }
 
-      const testDecipher = crypto.createDecipheriv(ALGORITHM_GCM, decryptedMasterKey, testIv)
-      testDecipher.setAuthTag(testTag)
-      const testDecrypted = Buffer.concat([testDecipher.update(testEncrypted), testDecipher.final()])
+      const metadataContent = fs.readFileSync(metadataPath, 'utf-8')
+      const metadata = JSON.parse(metadataContent)
 
-      return testDecrypted.equals(testData)
+      // 检查是否有笔记
+      const notes = (metadata as any).notes || []
+      if (notes.length === 0) {
+        // 没有笔记，无法验证
+        return false
+      }
+
+      // 获取第一个非删除的笔记
+      const note = notes.find((n: any) => n.deleted_at === null || n.deleted_at === undefined)
+      if (!note) {
+        // 所有笔记都被删除了
+        return false
+      }
+
+      // 验证 1: 解密 metadata.json 中的 title（title 是加密的 base64 字符串）
+      const encryptedTitle = note.title
+      const titleBuffer = Buffer.from(encryptedTitle, 'base64')
+      const titleIv = titleBuffer.subarray(0, IV_LENGTH)
+      const titleTag = titleBuffer.subarray(IV_LENGTH, IV_LENGTH + 16)
+      const titleCiphertext = titleBuffer.subarray(IV_LENGTH + 16)
+
+      const titleDecipher = crypto.createDecipheriv(ALGORITHM_GCM, decryptedMasterKey, titleIv)
+      titleDecipher.setAuthTag(titleTag)
+      titleDecipher.update(titleCiphertext)
+      titleDecipher.final('utf8')
+
+      // 验证 2: 解密笔记内容文件 (contents/{尾 2 字符}/{note_id}.enc)
+      const contentsDir = path.join(path.dirname(vaultPath), 'contents')
+      const suffix = note.id.slice(-2)
+      const noteFilePath = path.join(contentsDir, suffix, `${note.id}.enc`)
+
+      if (!fs.existsSync(noteFilePath)) {
+        // 笔记文件不存在
+        return false
+      }
+
+      const encryptedNoteData = fs.readFileSync(noteFilePath)
+      const noteIv = encryptedNoteData.subarray(0, IV_LENGTH)
+      const noteTag = encryptedNoteData.subarray(IV_LENGTH, IV_LENGTH + 16)
+      const noteCiphertext = encryptedNoteData.subarray(IV_LENGTH + 16)
+
+      const noteDecipher = crypto.createDecipheriv(ALGORITHM_GCM, decryptedMasterKey, noteIv)
+      noteDecipher.setAuthTag(noteTag)
+      noteDecipher.update(noteCiphertext)
+      noteDecipher.final('utf8')
+
+      // 能正常解密内容且解析为有效
+      return true
     } catch {
       return false
     }

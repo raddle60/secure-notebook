@@ -81,6 +81,7 @@ declare global {
         delete: (id: string) => Promise<{ success: boolean }>
         updateOrder: (id: string, order: number) => Promise<{ success: boolean }>
         moveFolder: (id: string, folderId: string) => Promise<{ success: boolean }>
+        count: () => Promise<number>
       }
       recycle: {
         list: () => Promise<{ folders: any[]; notes: any[]; attachments: any[] }>
@@ -382,6 +383,10 @@ export function useVault() {
     }
   }
 
+  async function getNoteCount(): Promise<number> {
+    return await api.notes.count()
+  }
+
   async function deleteFolder(id: string) {
     await api.folders.delete(id)
     await loadFolders()
@@ -569,6 +574,7 @@ export function useVault() {
     openVault,
     createVault,
     restoreLastOpenedNote,
-    updateWindowTitle
+    updateWindowTitle,
+    getNoteCount
   }
 }

@@ -32,7 +32,8 @@ const api = {
     update: (id: string, data: { title?: string; content?: string; contentType?: string }) => ipcRenderer.invoke('notes:update', id, data),
     delete: (id: string) => ipcRenderer.invoke('notes:delete', id),
     updateOrder: (id: string, order: number) => ipcRenderer.invoke('notes:updateOrder', id, order),
-    moveFolder: (id: string, folderId: string) => ipcRenderer.invoke('notes:moveFolder', id, folderId)
+    moveFolder: (id: string, folderId: string) => ipcRenderer.invoke('notes:moveFolder', id, folderId),
+    count: () => ipcRenderer.invoke('notes:count')
   },
   recycle: {
     list: () => ipcRenderer.invoke('recycle:list'),
