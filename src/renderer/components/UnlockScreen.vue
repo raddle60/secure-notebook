@@ -162,6 +162,7 @@
 import { ref, onMounted, watch, computed } from 'vue'
 import { useVault } from '../composables/useVault'
 import ResetPasswordDialog from './ResetPasswordDialog.vue'
+import { APP_VERSION } from '../../shared/constants'
 
 const api = window.vaultAPI
 const { openVault, createVault, isUnlocked, selectRecoveryKeySaveDir } = useVault()
@@ -194,6 +195,9 @@ const creating = ref(false)
 const recoveryKeyGenCount = ref(0)
 
 onMounted(async () => {
+  // 更新窗口标题
+  document.title = `安全记事本 v${APP_VERSION}`
+
   // 获取最近目录
   recentDirs.value = await api.vault.getRecentDirs()
 

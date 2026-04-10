@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { APP_VERSION } from '../../shared/constants'
 
 // 简单的事件总线，用于组件间通信
 type EventCallback = () => void
@@ -188,7 +189,7 @@ export function useVault() {
       const currentDir = await api.vault.getCurrentDir()
       if (currentDir) {
         // 使用完整路径
-        const title = `${currentDir} - 安全记事本`
+        const title = `${currentDir} - 安全记事本 v${APP_VERSION}`
         // 修改 HTML document.title（窗口标题显示这个）
         document.title = title
       }
@@ -323,7 +324,7 @@ export function useVault() {
     // 不清空 folders/notes/currentNote 等状态，保持 Vue 组件缓存
     // 锁定时界面会被 UnlockScreen 覆盖，用户无法交互，数据也不会泄露
     // 恢复原标题
-    document.title = 'Secure Notebook'
+    document.title = `安全记事本 v${APP_VERSION}`
   }
 
   async function changePassword(oldPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
