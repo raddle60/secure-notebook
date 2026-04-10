@@ -108,6 +108,12 @@ export function registerIPCHandlers(): void {
     return cryptoService.getVaultPath()
   })
 
+  // 获取当前金库目录名称
+  ipcMain.handle('vault:getCurrentDirName', () => {
+    const vaultPath = cryptoService.getVaultPath()
+    return vaultPath ? path.basename(vaultPath) : ''
+  })
+
   // 获取上次打开的目录
   ipcMain.handle('vault:getLastOpenedDir', () => {
     return settingsService.getLastOpenedDir()

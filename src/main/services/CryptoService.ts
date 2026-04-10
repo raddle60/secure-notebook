@@ -368,7 +368,7 @@ export class CryptoService {
     // recovery.key 数据 = iv(16) + tag(16) + encrypted_masterKey(32) = 64 字节
     const recoveryData = Buffer.concat([iv, tag, encryptedMasterKey])
 
-    // 生成文件名：recovery_yyyyMMddHHmmss_N.key
+    // 生成文件名：recovery_VaultDirName_yyyyMMddHHmmss_N.key
     const count = databaseService.incrementRecoveryKeyGenCount()
     const now = new Date()
     const timestamp = now.getFullYear().toString() +
@@ -377,7 +377,12 @@ export class CryptoService {
       String(now.getHours()).padStart(2, '0') +
       String(now.getMinutes()).padStart(2, '0') +
       String(now.getSeconds()).padStart(2, '0')
-    const filename = `recovery_${timestamp}_${count}.key`
+
+    // 提取 vault 目录名称并清理非法字符
+    const vaultDirName = path.basename(this.currentVaultPath)
+    const sanitizedVaultDirName = vaultDirName.replace(/[<>:"/\\|?*]/g, '_')
+
+    const filename = `recovery_${sanitizedVaultDirName}_${timestamp}_${count}.key`
 
     return { data: recoveryData, filename }
   }

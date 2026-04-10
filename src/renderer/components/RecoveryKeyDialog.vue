@@ -64,12 +64,13 @@ import { ref, computed, onMounted } from 'vue'
 import { useVault } from '../composables/useVault'
 
 const emit = defineEmits<{ close: []; skipped: []; generated: [] }>()
-const { getRecoveryKeyGenCount, generateRecoveryKey, selectRecoveryKeySaveDir } = useVault()
+const { getRecoveryKeyGenCount, generateRecoveryKey, selectRecoveryKeySaveDir, getCurrentDirName } = useVault()
 
 const genCount = ref(0)
 const saveDir = ref('')
 const error = ref('')
 const generating = ref(false)
+const vaultDirName = ref('')
 
 const suggestedFilename = computed(() => {
   const now = new Date()
@@ -79,11 +80,16 @@ const suggestedFilename = computed(() => {
     String(now.getHours()).padStart(2, '0') +
     String(now.getMinutes()).padStart(2, '0') +
     String(now.getSeconds()).padStart(2, '0')
-  return `recovery_${timestamp}_${genCount.value + 1}.key`
+
+  // 清理目录名称中的非法字符
+  const sanitizedVaultDirName = vaultDirName.value.replace(/[<>:"/\\|?*]/g, '_')
+
+  return `recovery_${sanitizedVaultDirName}_${timestamp}_${genCount.value + 1}.key`
 })
 
 onMounted(async () => {
   genCount.value = await getRecoveryKeyGenCount()
+  vaultDirName.value = await getCurrentDirName()
 })
 
 async function selectSaveDir() {

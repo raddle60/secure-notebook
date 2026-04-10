@@ -369,7 +369,13 @@ const recoveryFilename = computed(() => {
     String(now.getHours()).padStart(2, '0') +
     String(now.getMinutes()).padStart(2, '0') +
     String(now.getSeconds()).padStart(2, '0')
-  return `recovery_${timestamp}_${recoveryKeyGenCount.value + 1}.key`
+
+  // 从用户选择的目录提取名称
+  const dirName = selectedDir.value ? selectedDir.value.replace(/[\\/]/g, '/').split('/').pop() || '' : ''
+  // 清理目录名称中的非法字符
+  const sanitizedVaultDirName = dirName.replace(/[<>:"/\\|?*]/g, '_')
+
+  return `recovery_${sanitizedVaultDirName}_${timestamp}_${recoveryKeyGenCount.value + 1}.key`
 })
 
 function handleResetSuccess() {

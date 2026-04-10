@@ -57,6 +57,7 @@ declare global {
         create: (dirPath: string, password: string) => Promise<{ success: boolean; error?: string }>
         open: (dirPath: string, password: string) => Promise<{ success: boolean; error?: string }>
         getCurrentDir: () => Promise<string>
+        getCurrentDirName: () => Promise<string>
         getLastOpenedDir: () => Promise<string | null>
         getRecentDirs: () => Promise<string[]>
         unlock: (password: string) => Promise<{ success: boolean; created?: boolean }>
@@ -328,6 +329,10 @@ export function useVault() {
     return await api.vault.changePassword(oldPassword, newPassword)
   }
 
+  async function getCurrentDirName(): Promise<string> {
+    return await api.vault.getCurrentDirName()
+  }
+
   async function getRecoveryKeyGenCount(): Promise<number> {
     return await api.recovery.getGenCount()
   }
@@ -537,6 +542,7 @@ export function useVault() {
     unlock,
     lock,
     changePassword,
+    getCurrentDirName,
     getRecoveryKeyGenCount,
     generateRecoveryKey,
     verifyRecoveryKey,
