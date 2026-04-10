@@ -45,7 +45,7 @@
 
       <div class="dialog-footer">
         <button class="btn-skip" @click="handleSkip" :disabled="generating">
-          跳过
+          取消
         </button>
         <button
           class="btn-primary"
@@ -204,7 +204,7 @@ async function handleGenerate() {
 }
 
 .info-list li strong {
-  color: var(--text-primary);
+  color: var(--danger-color);
 }
 
 .count-highlight {
