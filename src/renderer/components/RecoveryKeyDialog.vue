@@ -6,6 +6,12 @@
         <button class="close-btn" @click="$emit('close')">×</button>
       </div>
       <div class="dialog-body">
+        <!-- 成功提示 -->
+        <div v-if="successMessage" class="success-message">
+          <span class="success-icon">✓</span>
+          <p>{{ successMessage }}</p>
+        </div>
+
         <div class="info-section">
           <p class="info-title">
             <span class="icon">🔑</span>
@@ -44,16 +50,21 @@
       </div>
 
       <div class="dialog-footer">
-        <button class="btn-skip" @click="handleSkip" :disabled="generating">
-          取消
+        <button v-if="successMessage" class="btn-primary" @click="$emit('close')">
+          完成
         </button>
-        <button
-          class="btn-primary"
-          @click="handleGenerate"
-          :disabled="!saveDir || generating"
-        >
-          {{ generating ? '生成中...' : '生成并保存' }}
-        </button>
+        <template v-else>
+          <button class="btn-skip" @click="handleSkip" :disabled="generating">
+            取消
+          </button>
+          <button
+            class="btn-primary"
+            @click="handleGenerate"
+            :disabled="!saveDir || generating"
+          >
+            {{ generating ? '生成中...' : '生成并保存' }}
+          </button>
+        </template>
       </div>
     </div>
   </div>
@@ -69,6 +80,7 @@ const { getRecoveryKeyGenCount, generateRecoveryKey, selectRecoveryKeySaveDir, g
 const genCount = ref(0)
 const saveDir = ref('')
 const error = ref('')
+const successMessage = ref('')
 const generating = ref(false)
 const vaultDirName = ref('')
 
@@ -117,8 +129,8 @@ async function handleGenerate() {
   try {
     const result = await generateRecoveryKey(saveDir.value)
     if (result.success) {
+      successMessage.value = `重置密钥文件已生成并保存：${result.filename}`
       emit('generated')
-      emit('close')
     } else {
       error.value = result.error || '生成失败'
     }
@@ -175,6 +187,28 @@ async function handleGenerate() {
   padding: 20px;
   overflow-y: auto;
   flex: 1;
+}
+
+.success-message {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: rgba(34, 197, 94, 0.1);
+  border-radius: 6px;
+  border: 1px solid #22c55e;
+}
+
+.success-icon {
+  font-size: 24px;
+  color: #22c55e;
+}
+
+.success-message p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-primary);
 }
 
 .info-section {

@@ -7,6 +7,7 @@ const api = {
     create: (dirPath: string, password: string) => ipcRenderer.invoke('vault:create', dirPath, password),
     open: (dirPath: string, password: string) => ipcRenderer.invoke('vault:open', dirPath, password),
     getCurrentDir: () => ipcRenderer.invoke('vault:getCurrentDir'),
+    getCurrentDirName: () => ipcRenderer.invoke('vault:getCurrentDirName'),
     getLastOpenedDir: () => ipcRenderer.invoke('vault:getLastOpenedDir'),
     getRecentDirs: () => ipcRenderer.invoke('vault:getRecentDirs'),
     removeRecentDir: (dir: string) => ipcRenderer.invoke('vault:removeRecentDir', dir),
