@@ -206,7 +206,7 @@ export class DatabaseService {
     return this.db.notes.find(n => n.is_external && n.external_path === filePath)
   }
 
-  createNote(id: string, folderId: string, title: string, contentType: string, isExternal = false, externalPath?: string, externalFileEncoding?: string): Note {
+  createNote(id: string, folderId: string, title: string, contentType: string, isExternal = false, externalPath?: string, externalFileEncoding?: string, language?: string): Note {
     const now = Date.now()
     // 获取当前文件夹下最大的 order 值
     const folderNotes = this.db.notes.filter(n => n.folder_id === folderId && n.deleted_at === null)
@@ -223,7 +223,8 @@ export class DatabaseService {
       order: maxOrder + 1000,  // 使用间隔值，便于后续插入
       is_external: isExternal,
       external_path: externalPath,
-      external_file_encoding: externalFileEncoding
+      external_file_encoding: externalFileEncoding,
+      language: language
     }
     this.db.notes.push(note)
     this.save()

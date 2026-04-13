@@ -779,6 +779,52 @@ export function registerIPCHandlers(): void {
   })
 
   // External file handlers
+  // 文件扩展名到语言映射
+  const extensionToLanguage: Record<string, string> = {
+    '.js': 'javascript',
+    '.jsx': 'javascript',
+    '.ts': 'typescript',
+    '.tsx': 'typescript',
+    '.py': 'python',
+    '.html': 'html',
+    '.htm': 'html',
+    '.css': 'css',
+    '.scss': 'css',
+    '.less': 'css',
+    '.json': 'json',
+    '.md': 'markdown',
+    '.markdown': 'markdown',
+    '.sql': 'sql',
+    '.java': 'java',
+    '.cpp': 'cpp',
+    '.cc': 'cpp',
+    '.cxx': 'cpp',
+    '.h': 'cpp',
+    '.hpp': 'cpp',
+    '.go': 'go',
+    '.rs': 'rust',
+    '.xml': 'xml',
+    '.yaml': 'yaml',
+    '.yml': 'yaml',
+    '.php': 'php',
+    '.sh': 'bash',
+    '.bash': 'bash',
+    '.zsh': 'bash',
+    '.fish': 'bash',
+    '.rb': 'ruby',
+    '.swift': 'swift',
+    '.kt': 'kotlin',
+    '.scala': 'scala',
+    '.r': 'r',
+    '.R': 'r',
+    '.lua': 'lua',
+    '.perl': 'perl',
+    '.pl': 'perl',
+    '.vim': 'vim',
+    '.txt': '',  // 纯文本不设语言
+    '.log': '',  // 日志文件不设语言
+  }
+
   ipcMain.handle('external:open', async (_, filePath: string, currentFolderId?: string | null) => {
     console.log('[external:open] Received request:', { filePath, currentFolderId })
     // 检查文件是否有效
@@ -838,8 +884,10 @@ export function registerIPCHandlers(): void {
     // MD文件为markdown类型，其他（.txt等）统一为plain类型
     const ext = path.extname(filePath).toLowerCase()
     const contentType = ext === '.md' ? 'markdown' : 'plain'
+    // 根据扩展名设置语言
+    const language = extensionToLanguage[ext] || ''
     const encryptedTitle = encryptText(title)
-    const note = databaseService.createNote(id, targetFolderId, encryptedTitle, contentType, true, filePath, encoding)
+    const note = databaseService.createNote(id, targetFolderId, encryptedTitle, contentType, true, filePath, encoding, language)
 
     const content = fs.readFileSync(filePath, encoding)
     return {
