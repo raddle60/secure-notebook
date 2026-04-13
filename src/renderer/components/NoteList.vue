@@ -200,7 +200,13 @@ function formatDate(timestamp: number): string {
 function showDeleteConfirm(note: any) {
   noteToDelete.value = note
   confirmTitle.value = '删除笔记'
-  confirmMessage.value = `确定要删除笔记 "${note.title}" 吗？将移入回收站。`
+  if (note.is_external) {
+    // 外部笔记：直接删除，不放入回收站
+    confirmMessage.value = `确定要删除外部笔记 "${note.title}" 吗？此操作仅删除笔记元信息，外部文件不会被删除。`
+  } else {
+    // 内部笔记：移入回收站
+    confirmMessage.value = `确定要删除笔记 "${note.title}" 吗？将移入回收站。`
+  }
   confirmDialogVisible.value = true
 }
 

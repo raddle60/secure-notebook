@@ -156,6 +156,8 @@ function showConfirm(action: 'restore' | 'delete', type: 'folder' | 'note', id: 
   confirmTitle.value = `${confirmText.value}${type === 'folder' ? '文件夹' : '笔记'}`
   if (action === 'restore') {
     confirmMessage.value = `确定要恢复 ${type === 'folder' ? '文件夹' : '笔记'} "${name}" 吗？`
+  } else if (type === 'note' && selectedNote.value?.is_external) {
+    confirmMessage.value = `确定要删除外部笔记 "${name}" 吗？此操作仅删除笔记元信息，外部文件不会被删除。`
   } else {
     confirmMessage.value = `确定要删除 ${type === 'folder' ? '文件夹' : '笔记'} "${name}" 吗？此操作不可恢复。`
   }

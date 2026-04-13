@@ -50,6 +50,8 @@
             :key="currentNoteId"
             :content="content"
             :note-id="currentNoteId"
+            :is-external="currentNote?.is_external"
+            :external-encoding="currentNote?.external_file_encoding"
             @update="updateContent"
           />
           <MarkdownEditor
@@ -57,6 +59,8 @@
             :key="currentNoteId"
             :content="content"
             :note-id="currentNoteId"
+            :is-external="currentNote?.is_external"
+            :external-encoding="currentNote?.external_file_encoding"
             @update="updateContent"
           />
           <RichTextEditor

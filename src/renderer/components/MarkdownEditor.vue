@@ -126,7 +126,12 @@
     <div class="editor-panes">
       <!-- 左侧: CodeMirror 源码编辑 -->
       <div class="pane source-pane" v-show="showSource" :style="{ width: showPreview ? sourcePaneWidth + 'px' : '100%' }">
-        <div class="pane-header">Markdown 源码编辑</div>
+        <div class="pane-header">
+          <span>Markdown 源码编辑</span>
+          <span v-if="isExternal && externalEncoding" class="encoding-label" :title="'文件编码：' + externalEncoding.toUpperCase()">
+            · {{ externalEncoding.toUpperCase() }}
+          </span>
+        </div>
         <div class="codemirror-wrapper" ref="sourceRef"></div>
       </div>
 
@@ -171,7 +176,7 @@ import ImageDialog from './ImageDialog.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
 import ContextMenu from './ContextMenu.vue'
 
-const props = defineProps<{ content: string; noteId?: string | null }>()
+const props = defineProps<{ content: string; noteId?: string | null; isExternal?: boolean; externalEncoding?: string }>()
 const emit = defineEmits<{ update: [content: string] }>()
 
 // 对话框状态
@@ -872,6 +877,16 @@ watch(() => props.content, (newContent) => {
   color: var(--text-secondary);
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.encoding-label {
+  font-weight: 500;
+  color: var(--accent-color);
+  cursor: default;
+  white-space: nowrap;
 }
 
 .codemirror-wrapper {

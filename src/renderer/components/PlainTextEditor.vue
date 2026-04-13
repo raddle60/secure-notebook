@@ -66,6 +66,9 @@
       </select>
       <div class="toolbar-divider"></div>
       <span class="toolbar-label">列编辑：Alt+ 拖动 | 多光标：Ctrl+ 点击</span>
+      <span v-if="isExternal && externalEncoding" class="toolbar-label encoding-label" :title="'文件编码：' + externalEncoding.toUpperCase()">
+        · {{ externalEncoding.toUpperCase() }}
+      </span>
       <div class="toolbar-spacer"></div>
     </div>
 
@@ -349,7 +352,7 @@ function columnSelectionKeymap() {
     }
   ])
 }
-const props = defineProps<{ content: string; noteId?: string | null }>()
+const props = defineProps<{ content: string; noteId?: string | null; isExternal?: boolean; externalEncoding?: string }>()
 const emit = defineEmits<{ update: [content: string] }>()
 
 const editorRef = ref<HTMLDivElement | null>(null)
@@ -1083,6 +1086,13 @@ watch(() => props.content, (newContent) => {
   font-size: 12px;
   color: var(--text-secondary);
   white-space: nowrap;
+}
+
+.encoding-label {
+  margin-left: 4px;
+  font-weight: 500;
+  color: var(--accent-color);
+  cursor: default;
 }
 
 .toolbar-spacer {
