@@ -3,6 +3,18 @@
     <div v-if="!currentNote" class="empty-state">
       <p>选择一篇笔记开始编辑</p>
     </div>
+    <div v-else-if="currentNote?.is_external && externalFileExists === false" class="external-file-error">
+      <div class="error-icon">
+        <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <h3>外部文件不存在</h3>
+      <p class="error-message">无法找到外部文件，文件可能已被删除或移动</p>
+      <p class="file-path" :title="currentNote.external_path">{{ currentNote.external_path }}</p>
+    </div>
     <div v-else class="editor-content">
       <div class="editor-header" :class="{ 'collapsed': isHeaderCollapsed }">
         <div class="header-top-row">
@@ -21,7 +33,7 @@
               />
               <span class="editor-type-label">{{ typeLabel(currentNote.content_type) }}</span>
             </div>
-            <AttachmentPanel :note-id="currentNoteId" class="attachment-panel" />
+            <AttachmentPanel :note-id="currentNoteId" :is-external="currentNote?.is_external" class="attachment-panel" />
           </div>
           <button
             v-show="!isHeaderCollapsed"
@@ -89,6 +101,7 @@ const { currentNote, currentNoteId, updateNote } = useVault()
 const title = ref('')
 const content = ref('')
 const contentType = ref<'plain' | 'markdown' | 'richtext'>('plain')
+const externalFileExists = ref<boolean | undefined>(undefined)
 
 // 头部折叠状态
 const isHeaderCollapsed = ref(false)
@@ -121,6 +134,7 @@ watch(currentNote, (note) => {
     title.value = note.title
     content.value = note.content || ''
     contentType.value = note.content_type
+    externalFileExists.value = note.externalFileExists
   }
 }, { immediate: true })
 
@@ -162,6 +176,46 @@ async function updateContent(newContent: string) {
   align-items: center;
   justify-content: center;
   color: var(--text-secondary);
+}
+
+.external-file-error {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--text-secondary);
+}
+
+.external-file-error .error-icon {
+  color: var(--error-color, #d32f2f);
+}
+
+.external-file-error h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.external-file-error .error-message {
+  font-size: 14px;
+  margin: 0;
+}
+
+.external-file-error .file-path {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  padding: 8px 12px;
+  border-radius: 4px;
+  max-width: 80%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
 }
 
 .editor-content {

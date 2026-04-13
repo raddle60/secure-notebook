@@ -346,11 +346,17 @@ export function registerIPCHandlers(): void {
     const note = databaseService.getNoteById(id)
     if (!note) return null
     let content = ''
+    let externalFileExists = true
     try {
       if (note.is_external) {
-        // 外部文件笔记：使用记录的编码格式读取
-        const encoding = note.external_file_encoding || 'utf-8'
-        content = fs.readFileSync(note.external_path!, encoding)
+        // 外部文件笔记：检查文件是否存在
+        if (!fs.existsSync(note.external_path!)) {
+          externalFileExists = false
+        } else {
+          // 使用记录的编码格式读取
+          const encoding = note.external_file_encoding || 'utf-8'
+          content = fs.readFileSync(note.external_path!, encoding)
+        }
       } else {
         // 内部笔记：从金库加载
         content = vaultService.loadContent(id)
@@ -361,7 +367,8 @@ export function registerIPCHandlers(): void {
     return {
       ...note,
       title: decryptText(note.title),
-      content
+      content,
+      externalFileExists
     }
   })
 

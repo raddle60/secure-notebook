@@ -1,5 +1,5 @@
 <template>
-  <div class="attachment-panel">
+  <div class="attachment-panel" v-if="!isExternal">
     <div class="attachment-header">
       <span class="attachment-title">附件</span>
       <button class="upload-btn" @click="triggerUpload" title="上传附件">
@@ -101,6 +101,7 @@ import { onAttachmentRefresh, emitRecycleBinRefresh } from '../composables/useVa
 
 const props = defineProps<{
   noteId: string | null
+  isExternal?: boolean
 }>()
 
 const attachments = ref<any[]>([])
