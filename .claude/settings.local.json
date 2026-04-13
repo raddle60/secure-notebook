@@ -22,7 +22,8 @@
       "Bash(cmd:*)",
       "Bash(npx asar:*)",
       "Bash(ls -la node_modules/argon2/build/Release/*.node)",
-      "Bash(npm start:*)"
+      "Bash(npm start:*)",
+      "Bash(python:*)"
     ]
   }
 }

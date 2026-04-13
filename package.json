@@ -98,7 +98,6 @@
     "electronDist": "node_modules/electron/dist",
     "electronVersion": "28.3.3",
     "win": {
-      "signAndEditExecutable": false,
       "icon": "resources/icon.ico"
     },
     "asarUnpack": [
