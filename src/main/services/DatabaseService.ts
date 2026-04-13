@@ -28,6 +28,9 @@ export interface Note {
   deleted_at: number | null
   language?: string  // 文本编辑器的语法高亮语言
   order: number  // 笔记在文件夹内的排序顺序
+  is_external: boolean  // 是否为外部文件笔记
+  external_path?: string  // 外部文件笔记的文件绝对路径
+  external_file_encoding?: string  // 外部文件笔记的编码格式（如 utf-8、gbk）
 }
 
 export interface Attachment {
@@ -198,7 +201,12 @@ export class DatabaseService {
     return this.db.notes.find(n => n.id === id)
   }
 
-  createNote(id: string, folderId: string, title: string, contentType: string): Note {
+  // 通过外部文件路径查找笔记
+  getNoteByExternalPath(filePath: string): Note | undefined {
+    return this.db.notes.find(n => n.is_external && n.external_path === filePath)
+  }
+
+  createNote(id: string, folderId: string, title: string, contentType: string, isExternal = false, externalPath?: string, externalFileEncoding?: string): Note {
     const now = Date.now()
     // 获取当前文件夹下最大的 order 值
     const folderNotes = this.db.notes.filter(n => n.folder_id === folderId && n.deleted_at === null)
@@ -212,7 +220,10 @@ export class DatabaseService {
       created_at: now,
       updated_at: now,
       deleted_at: null,
-      order: maxOrder + 1000  // 使用间隔值，便于后续插入
+      order: maxOrder + 1000,  // 使用间隔值，便于后续插入
+      is_external: isExternal,
+      external_path: externalPath,
+      external_file_encoding: externalFileEncoding
     }
     this.db.notes.push(note)
     this.save()

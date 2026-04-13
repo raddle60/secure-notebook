@@ -34,7 +34,8 @@ const api = {
     delete: (id: string) => ipcRenderer.invoke('notes:delete', id),
     updateOrder: (id: string, order: number) => ipcRenderer.invoke('notes:updateOrder', id, order),
     moveFolder: (id: string, folderId: string) => ipcRenderer.invoke('notes:moveFolder', id, folderId),
-    count: () => ipcRenderer.invoke('notes:count')
+    count: () => ipcRenderer.invoke('notes:count'),
+    openExternal: (filePath: string, currentFolderId?: string | null) => ipcRenderer.invoke('external:open', filePath, currentFolderId)
   },
   recycle: {
     list: () => ipcRenderer.invoke('recycle:list'),
@@ -100,6 +101,10 @@ const api = {
   onVaultLocked: (callback: () => void) => {
     ipcRenderer.on('vault:locked', callback)
     return () => ipcRenderer.removeListener('vault:locked', callback)
+  },
+  onOpenExternalFile: (callback: (filePath: string) => void) => {
+    ipcRenderer.on('note:openExternalFile', (_, filePath) => callback(filePath))
+    return () => ipcRenderer.removeAllListeners('note:openExternalFile')
   }
 }
 

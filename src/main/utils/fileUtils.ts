@@ -8,10 +8,11 @@ import path from 'path'
  *
  * @param filePath 目标文件路径
  * @param data 要写入的数据
- * @param options 可选的写入配置
+ * @param encoding 可选的编码（如 'utf-8'、'gbk'），或 WriteFileOptions 选项
  */
-export function writeFileSyncAtomic(filePath: string, data: string | Buffer, options?: fs.WriteFileOptions): void {
+export function writeFileSyncAtomic(filePath: string, data: string | Buffer, encoding?: string | fs.WriteFileOptions): void {
   const tmpPath = `${filePath}.tmp`
+  const options: fs.WriteFileOptions = typeof encoding === 'string' ? { encoding } : (encoding || 'utf-8')
 
   // 1. 写入临时文件
   fs.writeFileSync(tmpPath, data, options)

@@ -10,6 +10,105 @@ import { settingsService } from './SettingsService'
 import { v4 as uuidv4 } from 'uuid'
 import { writeFileSyncAtomic } from '../utils/fileUtils'
 
+// 编码检测：读取文件前10KB，检测是否为UTF-8或GBK编码
+function detectFileEncoding(filePath: string): string | null {
+  const buffer = Buffer.alloc(10240)  // 10KB
+  const fd = fs.openSync(filePath, 'r')
+  const bytesRead = fs.readSync(fd, buffer, 0, 10240, 0)
+  fs.closeSync(fd)
+
+  if (bytesRead === 0) {
+    return 'utf-8'  // 空文件默认为utf-8
+  }
+
+  // 检查BOM
+  if (bytesRead >= 3 && buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) {
+    return 'utf-8'
+  }
+  if (bytesRead >= 2 && buffer[0] === 0xFF && buffer[1] === 0xFE) {
+    return 'utf-16le'
+  }
+  if (bytesRead >= 2 && buffer[0] === 0xFE && buffer[1] === 0xFF) {
+    return 'utf-16be'
+  }
+
+  // 尝试UTF-8解码（严格模式）
+  try {
+    const text = buffer.toString('utf-8', 0, bytesRead)
+    const invalidUtf8 = (buffer as any).values?.() || [0]
+    // 检查是否有无效的UTF-8序列
+    let isValidUtf8 = true
+    for (let i = 0; i < bytesRead; i++) {
+      const byte = buffer[i]
+      if (byte >= 0x80) {
+        // 检查是否是有效的UTF-8序列
+        if ((byte & 0xE0) === 0xC0) {
+          // 2字节序列
+          if (i + 1 >= bytesRead || (buffer[i + 1] & 0xC0) !== 0x80) {
+            isValidUtf8 = false
+            break
+          }
+          i++
+        } else if ((byte & 0xF0) === 0xE0) {
+          // 3字节序列
+          if (i + 2 >= bytesRead || (buffer[i + 1] & 0xC0) !== 0x80 || (buffer[i + 2] & 0xC0) !== 0x80) {
+            isValidUtf8 = false
+            break
+          }
+          i += 2
+        } else if ((byte & 0xF8) === 0xF0) {
+          // 4字节序列
+          if (i + 3 >= bytesRead || (buffer[i + 1] & 0xC0) !== 0x80 || (buffer[i + 2] & 0xC0) !== 0x80 || (buffer[i + 3] & 0xC0) !== 0x80) {
+            isValidUtf8 = false
+            break
+          }
+          i += 3
+        } else {
+          isValidUtf8 = false
+          break
+        }
+      }
+    }
+    if (isValidUtf8) {
+      return 'utf-8'
+    }
+  } catch {
+    // UTF-8解码失败
+  }
+
+  // 尝试GBK解码
+  try {
+    // GBK编码范围：0x81-0xFE（双字节）和0x40-0x7E、0x80-0xFE（单字节）
+    let isValidGbk = true
+    let i = 0
+    while (i < bytesRead) {
+      const byte = buffer[i]
+      if (byte >= 0x80) {
+        // 需要双字节
+        if (i + 1 >= bytesRead) {
+          isValidGbk = false
+          break
+        }
+        const byte2 = buffer[i + 1]
+        if (!((byte >= 0x81 && byte <= 0xFE) && ((byte2 >= 0x40 && byte2 <= 0x7E) || (byte2 >= 0x80 && byte2 <= 0xFE)))) {
+          isValidGbk = false
+          break
+        }
+        i += 2
+      } else {
+        i++
+      }
+    }
+    if (isValidGbk) {
+      return 'gbk'
+    }
+  } catch {
+    // GBK解码失败
+  }
+
+  return null  // 无法识别编码
+}
+
 // Encrypt a string using cryptoService
 function encryptText(text: string): string {
   const encrypted = cryptoService.encryptContent(text)
@@ -248,7 +347,14 @@ export function registerIPCHandlers(): void {
     if (!note) return null
     let content = ''
     try {
-      content = vaultService.loadContent(id)
+      if (note.is_external) {
+        // 外部文件笔记：使用记录的编码格式读取
+        const encoding = note.external_file_encoding || 'utf-8'
+        content = fs.readFileSync(note.external_path!, encoding)
+      } else {
+        // 内部笔记：从金库加载
+        content = vaultService.loadContent(id)
+      }
     } catch {
       content = ''
     }
@@ -270,6 +376,11 @@ export function registerIPCHandlers(): void {
   })
 
   ipcMain.handle('notes:update', (_, id: string, data: { title?: string; content?: string; contentType?: string; language?: string }) => {
+    const note = databaseService.getNoteById(id)
+    if (!note) {
+      return { success: false, error: 'Note not found' }
+    }
+
     if (data.title !== undefined) {
       const encryptedTitle = encryptText(data.title)
       databaseService.updateNote(id, { title: encryptedTitle, contentType: data.contentType })
@@ -279,7 +390,14 @@ export function registerIPCHandlers(): void {
       databaseService.updateNote(id, { language: data.language })
     }
     if (data.content !== undefined) {
-      vaultService.saveContent(id, data.content)
+      if (note.is_external) {
+        // 外部文件笔记：使用记录的编码格式保存
+        const encoding = note.external_file_encoding || 'utf-8'
+        writeFileSyncAtomic(note.external_path!, data.content, encoding)
+      } else {
+        // 内部笔记：保存到金库
+        vaultService.saveContent(id, data.content)
+      }
     }
     return { success: true }
   })
@@ -290,7 +408,14 @@ export function registerIPCHandlers(): void {
   })
 
   ipcMain.handle('notes:delete', (_, id: string) => {
-    databaseService.softDeleteNote(id)
+    const note = databaseService.getNoteById(id)
+    if (note?.is_external) {
+      // 外部文件笔记：直接永久删除，不放入回收站
+      databaseService.permanentlyDeleteNote(id)
+    } else {
+      // 内部笔记：软删除，放入回收站
+      databaseService.softDeleteNote(id)
+    }
     return { success: true }
   })
 
@@ -651,5 +776,79 @@ export function registerIPCHandlers(): void {
       return null
     }
     return result.filePaths[0]
+  })
+
+  // External file handlers
+  ipcMain.handle('external:open', async (_, filePath: string, currentFolderId?: string | null) => {
+    console.log('[external:open] Received request:', { filePath, currentFolderId })
+    // 检查文件是否有效
+    if (!fs.existsSync(filePath)) {
+      console.log('[external:open] File not found:', filePath)
+      return { success: false, error: '文件不存在' }
+    }
+
+    // 检测文件编码
+    const encoding = detectFileEncoding(filePath)
+    console.log('[external:open] Detected encoding:', encoding)
+    if (!encoding) {
+      console.log('[external:open] Encoding detection failed:', filePath)
+      return { success: false, error: '无法识别文件编码，只支持 UTF-8 和 GBK 编码' }
+    }
+
+    // 查找是否已存在该路径的笔记
+    const existingNote = databaseService.getNoteByExternalPath(filePath)
+    console.log('[external:open] Existing note check:', existingNote ? 'found' : 'not found')
+    if (existingNote) {
+      // 已存在，使用记录的编码读取
+      const readEncoding = existingNote.external_file_encoding || 'utf-8'
+      const content = fs.readFileSync(filePath, readEncoding)
+      return {
+        success: true,
+        note: {
+          ...existingNote,
+          title: decryptText(existingNote.title),
+          content
+        }
+      }
+    }
+
+    // 不存在，创建新笔记
+    // 优先使用当前选中的文件夹，否则使用根文件夹或第一个文件夹
+    let targetFolderId = currentFolderId || null
+    console.log('[external:open] Target folder ID from currentFolderId:', targetFolderId)
+    if (!targetFolderId) {
+      const folders = databaseService.listFolders()
+      for (const folder of folders) {
+        if (folder.parent_id === null) {
+          targetFolderId = folder.id
+          break
+        }
+      }
+      if (!targetFolderId && folders.length > 0) {
+        targetFolderId = folders[0].id
+      }
+    }
+    if (!targetFolderId) {
+      return { success: false, error: '请先创建一个文件夹' }
+    }
+
+    // 创建外部文件笔记
+    const id = uuidv4()
+    const title = path.basename(filePath)
+    // MD文件为markdown类型，其他（.txt等）统一为plain类型
+    const ext = path.extname(filePath).toLowerCase()
+    const contentType = ext === '.md' ? 'markdown' : 'plain'
+    const encryptedTitle = encryptText(title)
+    const note = databaseService.createNote(id, targetFolderId, encryptedTitle, contentType, true, filePath, encoding)
+
+    const content = fs.readFileSync(filePath, encoding)
+    return {
+      success: true,
+      note: {
+        ...note,
+        title: decryptText(note.title),
+        content
+      }
+    }
   })
 }

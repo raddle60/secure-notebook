@@ -83,6 +83,7 @@ declare global {
         updateOrder: (id: string, order: number) => Promise<{ success: boolean }>
         moveFolder: (id: string, folderId: string) => Promise<{ success: boolean }>
         count: () => Promise<number>
+        openExternal: (filePath: string, currentFolderId?: string | null) => Promise<{ success: boolean; note?: any; error?: string }>
       }
       recycle: {
         list: () => Promise<{ folders: any[]; notes: any[]; attachments: any[] }>
@@ -146,6 +147,7 @@ declare global {
         selectSaveDir: () => Promise<string | null>
       }
       onVaultLocked: (callback: () => void) => () => void
+      onOpenExternalFile: (callback: (filePath: string) => void) => () => void
     }
   }
 }
@@ -169,6 +171,9 @@ export function useVault() {
   async function checkUnlocked() {
     isLoading.value = true
     try {
+      // 先设置外部文件打开监听器，确保锁定时也能接收事件
+      setupExternalFileListener()
+
       isUnlocked.value = await api.vault.isUnlocked()
       if (isUnlocked.value) {
         await loadFolders()
@@ -182,6 +187,33 @@ export function useVault() {
     } finally {
       isLoading.value = false
     }
+  }
+
+  // 外部文件打开监听器
+  let externalFileListenerCleanup: (() => void) | null = null
+  function setupExternalFileListener() {
+    if (externalFileListenerCleanup) {
+      externalFileListenerCleanup()
+    }
+    externalFileListenerCleanup = api.onOpenExternalFile(async (filePath: string) => {
+      // 如果金库未解锁，忽略文件请求
+      if (!isUnlocked.value) {
+        console.log('[useVault] Vault is locked, ignoring external file request')
+        return
+      }
+      console.log('[useVault] Received external file open request:', filePath)
+      try {
+        // 使用当前最新的 currentFolderId.value
+        const result = await api.notes.openExternal(filePath, currentFolderId.value)
+        if (result.success && result.note) {
+          await selectNote(result.note.id)
+        } else {
+          console.error('[useVault] Failed to open external file:', result.error)
+        }
+      } catch (e) {
+        console.error('[useVault] Failed to open external note:', e)
+      }
+    })
   }
 
   // 更新窗口标题为当前目录
