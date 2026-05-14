@@ -147,7 +147,7 @@
       <!-- 右侧: Milkdown 只读预览 -->
       <div class="pane preview-pane" v-show="showPreview">
         <div class="pane-header">Markdown 预览</div>
-        <div class="milkdown-wrapper" ref="previewRef" @mousedown.capture="handlePreviewClick"></div>
+        <div class="milkdown-wrapper" ref="previewRef"></div>
       </div>
     </div>
   </div>
@@ -461,33 +461,6 @@ function openSearch() {
   }
 }
 
-// 处理 Milkdown 点击事件（附件下载）
-function handlePreviewClick(event: MouseEvent) {
-  const target = event.target as HTMLElement
-  const link = target.closest('a')
-
-  if (link) {
-    const href = link.getAttribute('href')
-
-    if (href?.startsWith('http://attachment/')) {
-      // 附件链接：仅在 Ctrl+左键 时下载
-      if (event.ctrlKey) {
-        const attachmentId = href.replace('http://attachment/', '')
-        const att = attachments.value.find(a => a.id === attachmentId)
-        downloadFilename.value = att?.filename || '附件'
-        pendingDownloadId.value = attachmentId
-        showConfirmDialog.value = true
-      }
-    } else if (event.ctrlKey && href) {
-      // Ctrl + 左键：在系统默认浏览器中打开
-      window.vaultAPI.app.openExternal(href)
-    }
-    // link不走默认行为
-    event.preventDefault()
-    event.stopPropagation()
-  }
-}
-
 // 确认下载附件
 async function confirmDownload() {
   if (!pendingDownloadId.value) return
@@ -692,10 +665,47 @@ function updateMilkdown(content: string) {
   }
 }
 
+// 全局链接点击拦截，确保在 Milkdown 之前处理（同时拦截 mousedown 和 click）
+function interceptLinkClick(event: MouseEvent) {
+  const target = event.target as HTMLElement
+  const link = target.closest('a')
+
+  if (link) {
+    const href = link.getAttribute('href')
+    if (!href) return
+
+    // 阻止所有链接的默认行为（Milkdown 预览模式下不应跳转到任何链接）
+    event.preventDefault()
+    event.stopPropagation()
+
+    // 只在 mousedown 事件时处理链接逻辑，避免 click 重复处理
+    if (event.type === 'mousedown') {
+      if (href?.startsWith('http://attachment/')) {
+        // 附件链接：仅在 Ctrl+左键 时下载
+        if (event.ctrlKey) {
+          const attachmentId = href.replace('http://attachment/', '')
+          const att = attachments.value.find(a => a.id === attachmentId)
+          downloadFilename.value = att?.filename || '附件'
+          pendingDownloadId.value = attachmentId
+          showConfirmDialog.value = true
+        }
+      } else if (event.ctrlKey && href) {
+        // Ctrl + 左键：在系统默认浏览器中打开
+        window.vaultAPI.app.openExternal(href)
+      }
+      // 单击普通链接不处理（预览模式下只是选中文本）
+    }
+  }
+}
+
 onMounted(async () => {
   await loadSettings()
   await initMilkdown(props.content || '')
   initCodeMirror(props.content || '')
+
+  // 添加全局点击拦截，防止 Milkdown 默认打开链接
+  document.addEventListener('click', interceptLinkClick, true)
+  document.addEventListener('mousedown', interceptLinkClick, true)
 
   // 使用 MutationObserver 监听主题变化
   observer = new MutationObserver((mutations) => {
@@ -731,6 +741,9 @@ onBeforeUnmount(() => {
   // 清理拖动事件监听器
   document.removeEventListener('mousemove', onDrag)
   document.removeEventListener('mouseup', stopDrag)
+  // 清理链接点击拦截
+  document.removeEventListener('click', interceptLinkClick, true)
+  document.removeEventListener('mousedown', interceptLinkClick, true)
 })
 
 watch(() => props.content, (newContent) => {
