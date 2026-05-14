@@ -147,7 +147,7 @@
       <!-- 右侧: Milkdown 只读预览 -->
       <div class="pane preview-pane" v-show="showPreview">
         <div class="pane-header">Markdown 预览</div>
-        <div class="milkdown-wrapper" ref="previewRef"></div>
+        <div class="milkdown-wrapper" ref="previewRef" :class="{ 'ctrl-pressed': isCtrlPressed }"></div>
       </div>
     </div>
   </div>
@@ -194,6 +194,9 @@ const contextMenuAnchor = ref<{ from: number; to: number } | null>(null)
 
 // 附件列表
 const attachments = ref<any[]>([])
+
+// Ctrl 键状态
+const isCtrlPressed = ref(false)
 
 async function loadAttachments() {
   if (props.noteId) {
@@ -703,6 +706,19 @@ function interceptLinkClick(event: MouseEvent) {
   }
 }
 
+// Ctrl 键按下/释放处理
+function handleCtrlKeyDown(event: KeyboardEvent) {
+  if (event.key === 'Control') {
+    isCtrlPressed.value = true
+  }
+}
+
+function handleCtrlKeyUp(event: KeyboardEvent) {
+  if (event.key === 'Control') {
+    isCtrlPressed.value = false
+  }
+}
+
 onMounted(async () => {
   await loadSettings()
   await initMilkdown(props.content || '')
@@ -711,6 +727,10 @@ onMounted(async () => {
   // 添加全局点击拦截，防止 Milkdown 默认打开链接
   document.addEventListener('click', interceptLinkClick, true)
   document.addEventListener('mousedown', interceptLinkClick, true)
+
+  // 添加 Ctrl 键状态监听
+  document.addEventListener('keydown', handleCtrlKeyDown)
+  document.addEventListener('keyup', handleCtrlKeyUp)
 
   // 使用 MutationObserver 监听主题变化
   observer = new MutationObserver((mutations) => {
@@ -749,6 +769,9 @@ onBeforeUnmount(() => {
   // 清理链接点击拦截
   document.removeEventListener('click', interceptLinkClick, true)
   document.removeEventListener('mousedown', interceptLinkClick, true)
+  // 清理 Ctrl 键监听
+  document.removeEventListener('keydown', handleCtrlKeyDown)
+  document.removeEventListener('keyup', handleCtrlKeyUp)
 })
 
 watch(() => props.content, (newContent) => {
@@ -1197,6 +1220,11 @@ watch(() => props.content, (newContent) => {
 .milkdown-wrapper :deep(.milkdown a) {
   color: var(--accent-color);
   text-decoration: underline;
+  cursor: default;
+}
+
+.milkdown-wrapper.ctrl-pressed :deep(.milkdown a) {
+  cursor: pointer;
 }
 
 .milkdown-wrapper :deep(.milkdown img) {
