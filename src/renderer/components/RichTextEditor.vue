@@ -612,6 +612,7 @@
       v-if="!isSourceMode"
       :editor="editor"
       class="editor-content"
+      :class="{ 'ctrl-pressed': isCtrlPressed }"
       @mousedown.capture="handleEditorClick"
       @paste="handleEditorPaste"
       @contextmenu="handleContextMenu"
@@ -736,6 +737,7 @@ const editLinkText = ref('')
 const editLinkHref = ref('')
 
 // 格式刷相关状态
+const isCtrlPressed = ref(false)
 const isFormatBrushActive = ref(false)
 const copiedFormat = ref<Partial<{
   bold: boolean
@@ -809,6 +811,9 @@ onMounted(async () => {
   document.addEventListener('click', handleGlobalClick)
   // 添加键盘快捷键监听
   document.addEventListener('keydown', handleKeyDown)
+  // 添加 Ctrl 键状态监听
+  document.addEventListener('keydown', handleCtrlKeyDown)
+  document.addEventListener('keyup', handleCtrlKeyUp)
 })
 
 function handleKeyDown(event: KeyboardEvent) {
@@ -831,6 +836,18 @@ function handleKeyDown(event: KeyboardEvent) {
   if (event.key === 'Escape' && showSearchDialog.value) {
     event.preventDefault()
     showSearchDialog.value = false
+  }
+}
+
+function handleCtrlKeyDown(event: KeyboardEvent) {
+  if (event.key === 'Control') {
+    isCtrlPressed.value = true
+  }
+}
+
+function handleCtrlKeyUp(event: KeyboardEvent) {
+  if (event.key === 'Control') {
+    isCtrlPressed.value = false
   }
 }
 
@@ -1540,6 +1557,8 @@ onBeforeUnmount(() => {
   editor.value?.destroy()
   document.removeEventListener('click', handleGlobalClick)
   document.removeEventListener('keydown', handleKeyDown)
+  document.removeEventListener('keydown', handleCtrlKeyDown)
+  document.removeEventListener('keyup', handleCtrlKeyUp)
 })
 </script>
 
@@ -1916,6 +1935,10 @@ onBeforeUnmount(() => {
 .editor-content :deep(.ProseMirror a) {
   color: var(--accent-color);
   text-decoration: underline;
+  cursor: text;
+}
+
+.editor-content.ctrl-pressed :deep(.ProseMirror a) {
   cursor: pointer;
 }
 
