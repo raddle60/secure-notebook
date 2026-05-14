@@ -147,7 +147,7 @@
       <!-- 右侧: Milkdown 只读预览 -->
       <div class="pane preview-pane" v-show="showPreview">
         <div class="pane-header">Markdown 预览</div>
-        <div class="milkdown-wrapper" ref="previewRef" @click="handlePreviewClick"></div>
+        <div class="milkdown-wrapper" ref="previewRef" @mousedown.capture="handlePreviewClick"></div>
       </div>
     </div>
   </div>
@@ -472,7 +472,6 @@ function handlePreviewClick(event: MouseEvent) {
     if (href?.startsWith('http://attachment/')) {
       // 附件链接：仅在 Ctrl+左键 时下载
       if (event.ctrlKey) {
-        event.preventDefault()
         const attachmentId = href.replace('http://attachment/', '')
         const att = attachments.value.find(a => a.id === attachmentId)
         downloadFilename.value = att?.filename || '附件'
@@ -480,10 +479,12 @@ function handlePreviewClick(event: MouseEvent) {
         showConfirmDialog.value = true
       }
     } else if (event.ctrlKey && href) {
-      // Ctrl + 左键：在默认浏览器中打开
-      event.preventDefault()
-      window.open(href, '_blank')
+      // Ctrl + 左键：在系统默认浏览器中打开
+      window.vaultAPI.app.openExternal(href)
     }
+    // link不走默认行为
+    event.preventDefault()
+    event.stopPropagation()
   }
 }
 
