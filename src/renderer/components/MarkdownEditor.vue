@@ -667,6 +667,11 @@ function updateMilkdown(content: string) {
 
 // 全局链接点击拦截，确保在 Milkdown 之前处理（同时拦截 mousedown 和 click）
 function interceptLinkClick(event: MouseEvent) {
+  // 只处理属于 MarkdownEditor 组件内部的链接，避免影响其他组件
+  if (!previewRef.value?.contains(event.target as Node)) {
+    return
+  }
+
   const target = event.target as HTMLElement
   const link = target.closest('a')
 
