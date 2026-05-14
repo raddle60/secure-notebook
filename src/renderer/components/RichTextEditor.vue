@@ -612,7 +612,7 @@
       v-if="!isSourceMode"
       :editor="editor"
       class="editor-content"
-      @click="handleEditorClick"
+      @mousedown.capture="handleEditorClick"
       @paste="handleEditorPaste"
       @contextmenu="handleContextMenu"
     />
@@ -1323,8 +1323,8 @@ function handleEditorClick(event: MouseEvent) {
     const href = link.getAttribute('href')
 
     if (href?.startsWith('http://attachment/')) {
-      // 附件链接：仅在 Alt+左键 时下载
-      if (event.altKey) {
+      // 附件链接：仅在 Ctrl+左键 时下载
+      if (event.ctrlKey) {
         event.preventDefault()
         event.stopPropagation()
         const attachmentId = href.replace('http://attachment/', '')
@@ -1335,8 +1335,8 @@ function handleEditorClick(event: MouseEvent) {
       }
       // 普通左键点击：不处理
     } else if (href) {
-      // 普通链接：仅在 Alt+ 左键 时在浏览器中打开
-      if (event.altKey) {
+      // 普通链接：仅在 Ctrl+ 左键 时在浏览器中打开
+      if (event.ctrlKey) {
         event.preventDefault()
         event.stopPropagation()
         window.vaultAPI.app.openExternal(href)
@@ -1344,6 +1344,7 @@ function handleEditorClick(event: MouseEvent) {
       // 否则只是选中链接，让编辑器默认处理
     }
   }
+
 }
 
 async function confirmDownload() {
