@@ -42,11 +42,42 @@
         <div class="setting-item">
           <span class="setting-label">编辑器字体</span>
           <div class="editor-font-control">
-            <select v-model="fontFamily" @change="updateEditorFont" class="font-select">
-              <option v-for="font in availableFonts" :key="font.value" :value="font.value">
-                {{ font.label }}
-              </option>
-            </select>
+            <div class="font-combobox">
+              <div class="font-combobox-input-wrapper">
+                <input
+                  v-model="fontInputText"
+                  @focus="showFontDropdown = true"
+                  @input="onFontInput"
+                  @blur="onFontBlur"
+                  @keydown.down.prevent="navigateFontDropdown(1)"
+                  @keydown.up.prevent="navigateFontDropdown(-1)"
+                  @keydown.enter.prevent="applyTypedFont"
+                  class="font-input"
+                  placeholder="选择或输入字体"
+                />
+                <button class="font-dropdown-btn" @click="toggleFontDropdown" type="button">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <div v-if="showFontDropdown" class="font-dropdown">
+                <div
+                  v-for="(font, index) in filteredFonts"
+                  :key="font.value"
+                  class="font-dropdown-item"
+                  :class="{ highlighted: index === highlightedFontIndex }"
+                  @mousedown.prevent="selectFont(font)"
+                  @mouseover="highlightedFontIndex = index"
+                >
+                  {{ font.label }}
+                </div>
+                <div v-if="filteredFonts.length === 0" class="font-dropdown-empty">
+                  无匹配字体
+                </div>
+              </div>
+            </div>
+            <span v-if="fontError" class="font-error">{{ fontError }}</span>
             <select v-model="fontSize" @change="updateEditorFont" class="font-size-select">
               <option :value="12">12px</option>
               <option :value="13">13px</option>
@@ -127,11 +158,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useVault } from '../composables/useVault'
 import ChangePasswordDialog from './ChangePasswordDialog.vue'
 import RecoveryKeyDialog from './RecoveryKeyDialog.vue'
-import { getAvailableFonts } from '../utils/fontDetector'
+import { getAvailableFonts, isFontAvailable } from '../utils/fontDetector'
 
 const emit = defineEmits<{ close: [] }>()
 const { lock, getRecoveryKeyGenCount } = useVault()
@@ -144,7 +175,130 @@ const autoLockMinutes = ref(10)
 const fontFamily = ref('Consolas, "Courier New", monospace')
 const fontSize = ref(14)
 const cacheSize = ref(20)
+const fontError = ref('')
 const availableFonts = ref<Array<{ value: string; label: string }>>([])
+const fontInputText = ref('')
+const showFontDropdown = ref(false)
+const highlightedFontIndex = ref(0)
+
+// 获取当前字体对应的显示文本（label）
+const currentFontLabel = computed(() => {
+  const found = availableFonts.value.find(f => f.value === fontFamily.value)
+  return found ? found.label : fontFamily.value.split(',')[0].replace(/["']/g, '')
+})
+
+// 过滤后的字体列表（根据输入文本过滤）
+const filteredFonts = computed(() => {
+  if (!fontInputText.value) return availableFonts.value
+  const search = fontInputText.value.toLowerCase()
+  return availableFonts.value.filter(f => f.label.toLowerCase().includes(search))
+})
+
+// 点击外部关闭下拉框
+function handleDocumentMousedown(e: MouseEvent) {
+  const combobox = document.querySelector('.font-combobox')
+  if (combobox && !combobox.contains(e.target as Node)) {
+    showFontDropdown.value = false
+    fontInputText.value = currentFontLabel.value
+  }
+}
+
+function closeFontDropdown() {
+  showFontDropdown.value = false
+}
+
+function toggleFontDropdown() {
+  showFontDropdown.value = !showFontDropdown.value
+  if (showFontDropdown.value) {
+    fontInputText.value = ''
+    highlightedFontIndex.value = 0
+  }
+}
+
+function onFontInput() {
+  showFontDropdown.value = true
+  highlightedFontIndex.value = 0
+}
+
+function onFontBlur() {
+  // 延迟关闭以便点击下拉项
+  setTimeout(async () => {
+    showFontDropdown.value = false
+    // 检查输入的是否是自定义字体（不在下拉列表中）
+    const typedText = fontInputText.value.trim()
+    const matchedFont = availableFonts.value.find(f => f.label === typedText || f.value === typedText)
+
+    if (matchedFont) {
+      // 如果匹配到下拉列表中的字体，使用它
+      fontFamily.value = matchedFont.value
+      fontInputText.value = matchedFont.label
+      fontError.value = ''
+    } else if (typedText) {
+      // 如果是自定义输入，验证字体是否可用
+      const available = await isFontAvailable(typedText)
+      if (available) {
+        // 可用，保存自定义字体（使用输入的值作为 font family）
+        fontFamily.value = typedText
+        fontError.value = ''
+        await window.vaultAPI.settings.updateEditorFont(fontFamily.value, fontSize.value)
+        document.documentElement.style.setProperty('--editor-font-family', fontFamily.value)
+        document.documentElement.style.setProperty('--editor-font-size', `${fontSize.value}px`)
+        window.dispatchEvent(new CustomEvent('editor-font-changed'))
+      } else {
+        // 不可用，恢复显示当前选中字体的 label
+        fontError.value = '该字体未安装或不可用'
+        fontInputText.value = currentFontLabel.value
+      }
+    } else {
+      // 输入为空，恢复显示当前选中字体的 label
+      fontInputText.value = currentFontLabel.value
+    }
+  }, 150)
+}
+
+function navigateFontDropdown(direction: number) {
+  const fonts = filteredFonts.value
+  if (fonts.length === 0) return
+  highlightedFontIndex.value = Math.max(0, Math.min(fonts.length - 1, highlightedFontIndex.value + direction))
+}
+
+function selectHighlightedFont() {
+  const fonts = filteredFonts.value
+  if (fonts.length === 0) return
+  selectFont(fonts[highlightedFontIndex.value])
+}
+
+async function applyTypedFont() {
+  const typedText = fontInputText.value.trim()
+  const matchedFont = availableFonts.value.find(f => f.label === typedText || f.value === typedText)
+
+  if (matchedFont) {
+    // 匹配到下拉列表中的字体
+    selectFont(matchedFont)
+  } else if (typedText) {
+    // 自定义输入，验证字体是否可用
+    const available = await isFontAvailable(typedText)
+    if (available) {
+      fontFamily.value = typedText
+      fontInputText.value = typedText
+      fontError.value = ''
+      await window.vaultAPI.settings.updateEditorFont(fontFamily.value, fontSize.value)
+      document.documentElement.style.setProperty('--editor-font-family', fontFamily.value)
+      document.documentElement.style.setProperty('--editor-font-size', `${fontSize.value}px`)
+      window.dispatchEvent(new CustomEvent('editor-font-changed'))
+      showFontDropdown.value = false
+    } else {
+      fontError.value = '该字体未安装或不可用'
+    }
+  }
+}
+
+function selectFont(font: { value: string; label: string }) {
+  fontFamily.value = font.value
+  fontInputText.value = font.label
+  showFontDropdown.value = false
+  updateEditorFont()
+}
 
 onMounted(async () => {
   currentTheme.value = await window.vaultAPI.settings.getTheme()
@@ -165,6 +319,14 @@ onMounted(async () => {
   }
   // 加载重置密钥生成次数
   recoveryKeyGenCount.value = await getRecoveryKeyGenCount()
+  // 初始化字体输入框显示文本
+  fontInputText.value = currentFontLabel.value
+  // 添加点击外部关闭下拉框
+  document.addEventListener('mousedown', handleDocumentMousedown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('mousedown', handleDocumentMousedown)
 })
 
 async function updateCacheSize() {
@@ -182,6 +344,13 @@ async function updateAutoLock() {
 }
 
 async function updateEditorFont() {
+  // 检查字体是否已安装
+  const available = await isFontAvailable(fontFamily.value)
+  if (!available) {
+    fontError.value = '该字体未安装或不可用'
+    return
+  }
+  fontError.value = ''
   await window.vaultAPI.settings.updateEditorFont(fontFamily.value, fontSize.value)
   // 立即更新 CSS 变量
   document.documentElement.style.setProperty('--editor-font-family', fontFamily.value)
@@ -395,36 +564,110 @@ async function handleExportVault() {
 .editor-font-control {
   display: flex;
   gap: 8px;
+  align-items: flex-start;
+  position: relative;
+}
+
+.font-combobox {
+  position: relative;
+}
+
+.font-combobox-input-wrapper {
+  display: flex;
   align-items: center;
 }
 
-.font-select {
-  flex: 1;
+.font-input {
+  min-width: 140px;
   padding: 6px 8px;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 4px 0 0 4px;
   background: var(--bg-primary);
   color: var(--text-primary);
-  cursor: pointer;
   font-size: 13px;
-  max-width: 200px;
 }
 
-.font-select:hover {
+.font-input:hover {
   background: var(--bg-hover);
 }
 
-:root[data-theme='dark'] .font-select:hover {
+:root[data-theme='dark'] .font-input:hover {
   border-color: var(--bg-selected);
 }
 
-.font-select:focus {
+.font-input:focus {
   outline: none;
   border-color: var(--accent-color);
+  border-right-color: var(--border-color);
 }
 
-:root[data-theme='dark'] .font-select:focus {
+:root[data-theme='dark'] .font-input:focus {
   border-color: var(--bg-selected);
+}
+
+.font-dropdown-btn {
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.font-dropdown-btn:hover {
+  background: var(--bg-hover);
+}
+
+:root[data-theme='dark'] .font-dropdown-btn:hover {
+  border-color: var(--bg-selected);
+}
+
+.font-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1000;
+  margin-top: 4px;
+}
+
+.font-dropdown-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.font-dropdown-item:hover,
+.font-dropdown-item.highlighted {
+  background: var(--bg-hover);
+}
+
+.font-dropdown-empty {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.font-error {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  font-size: 11px;
+  color: #e53935;
+  margin-top: 2px;
+  white-space: nowrap;
+  z-index: 100;
 }
 
 .font-size-select {
