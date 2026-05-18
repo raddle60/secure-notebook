@@ -160,7 +160,9 @@ import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm } from '@milkdown/kit/preset/gfm'
 import { clipboard } from '@milkdown/plugin-clipboard'
 import { diagram, mermaidConfigCtx } from '@milkdown/plugin-diagram'
+import { math, katexOptionsCtx } from '@milkdown/plugin-math'
 import { parserCtx } from '@milkdown/core'
+import 'katex/dist/katex.min.css'
 import mermaid from 'mermaid'
 import { EditorState, EditorSelection } from '@codemirror/state'
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightSpecialChars, highlightWhitespace, drawSelection } from '@codemirror/view'
@@ -607,12 +609,17 @@ async function initMilkdown(content: string) {
         startOnLoad: false,
         theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default',
       })
+      ctx.set(katexOptionsCtx.key, {
+        throwOnError: false,
+        displayMode: false,
+      })
     })
     .use(commonmark)
     .use(gfm)
     .use(clipboard)
     .use(imageInlineComponent)
     .use(diagram)
+    .use(math)
 
   await milkdownEditor.create()
 
@@ -1309,5 +1316,35 @@ watch(() => props.content, (newContent) => {
 :root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown div[data-type="diagram"]) {
   background: #161b22;
   border-color: #30363d;
+}
+
+/* KaTeX 数学公式样式 */
+.milkdown-wrapper :deep(.katex-display) {
+  margin: 1em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5em 0;
+}
+
+.milkdown-wrapper :deep(.katex) {
+  font-size: 1.1em;
+}
+
+.milkdown-wrapper :deep(.math_inline) {
+  padding: 0 0.2em;
+}
+
+.milkdown-wrapper :deep(.math_block) {
+  padding: 0.5em 0;
+  text-align: center;
+}
+
+/* 暗色主题下 KaTeX 样式调整 */
+:root[data-theme='dark'] .milkdown-wrapper :deep(.katex) {
+  color: var(--text-primary);
+}
+
+:root[data-theme='dark'] .milkdown-wrapper :deep(.math_block) {
+  color: var(--text-primary);
 }
 </style>
