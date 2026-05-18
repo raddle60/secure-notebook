@@ -1,7 +1,8 @@
 // 字体检测工具 - 使用 Canvas 测量文本宽度来判断字体是否已安装
 // 并检测系统字体
 
-const TEST_TEXT = 'mmww' // 使用这些字符因为它们在 monospace 和 sans-serif 下宽度差异明显
+const TEST_TEXT = 'mmmm' // 使用这些字符因为它们在不同字体下宽度差异明显
+const TEST_CJK = '中文' // 使用中文测试 CJK 字体
 
 // 跨平台系统字体列表
 interface FontDef {
@@ -51,7 +52,7 @@ const FONT_OPTIONS: FontDef[] = [
 ]
 
 // 测量指定字体的文本宽度
-function measureText(fontFamily: string): number {
+function measureText(fontFamily: string, text: string): number {
   const canvas = document.createElement('canvas')
   const context = canvas.getContext('2d')
   if (!context) return 0
@@ -59,24 +60,44 @@ function measureText(fontFamily: string): number {
   // 设置字体 - 不使用引号，让浏览器解析
   context.font = `100px ${fontFamily}`
 
-  const metrics = context.measureText(TEST_TEXT)
+  const metrics = context.measureText(text)
   return metrics.width
 }
 
-// 检测字体是否已安装
+// 检测字体是否已安装（使用 document.fonts.check 如果可用）
 function isFontInstalled(fontName: string, fallback: string): boolean {
-  // 测量使用目标字体的宽度
-  const widthWithFont = measureText(fontName)
-  // 测量仅使用回退字体的宽度
-  const widthWithFallback = measureText(fallback)
+  // 尝试使用 document.fonts.check() API 进行更准确的检测
+  try {
+    if (document.fonts && document.fonts.check) {
+      // 检查字体是否在 CSS font cache 中
+      const isInCache = document.fonts.check(`12px "${fontName}"`)
+      if (isInCache) return true
+    }
+  } catch {
+    // document.fonts.check 不支持，忽略
+  }
+
+  // 回退到 Canvas 测量法
+  // 使用多种测试文本来提高检测准确性
+  const widthWithFont = measureText(fontName, TEST_TEXT)
+  const widthWithFallback = measureText(fallback, TEST_TEXT)
 
   // 如果宽度不同，说明字体已安装（因为回退字体渲染结果不同）
-  // 使用一个容差值
   const diff = Math.abs(widthWithFont - widthWithFallback)
   const ratio = diff / Math.max(widthWithFont, widthWithFallback, 1)
 
-  // 如果差异超过 5%，认为字体已安装
-  return ratio > 0.05
+  // 如果差异超过 3%，认为字体已安装
+  if (ratio > 0.03) return true
+
+  // 对于可能是 CJK 字体的名称，使用中文再检测一次
+  // CJK 字符在不同字体下宽度差异更明显
+  const cjkWidthWithFont = measureText(fontName, TEST_CJK)
+  const cjkWidthWithFallback = measureText(fallback, TEST_CJK)
+  const cjkDiff = Math.abs(cjkWidthWithFont - cjkWidthWithFallback)
+  const cjkRatio = cjkDiff / Math.max(cjkWidthWithFont, cjkWidthWithFallback, 1)
+
+  // CJK 字体差异阈值设为 1%
+  return cjkRatio > 0.01
 }
 
 // 获取当前平台
