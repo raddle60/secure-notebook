@@ -1090,20 +1090,57 @@ watch(() => props.content, (newContent) => {
 :root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h4),
 :root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h5),
 :root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h6) {
-  color: var(--text-primary);
+  color: var(--milkdown-heading-color) !important;
+}
+
+/* 标题内部的 p, strong, em 不覆盖 */
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h1 p),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h1 strong),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h1 em),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h2 p),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h2 strong),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h2 em),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h3 p),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h3 strong),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h3 em),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h4 p),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h4 strong),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h4 em),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h5 p),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h5 strong),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h5 em),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h6 p),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h6 strong),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown h6 em) {
+  color: var(--milkdown-heading-color) !important;
 }
 
 :root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown p) {
-  color: var(--text-primary);
+  color: var(--milkdown-paragraph-color);
 }
 
-:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown li) {
-  color: var(--text-primary);
+/* 列表项及内部的 p, strong, em 不覆盖 */
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown li),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown li p),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown li strong),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown li em),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown ul li),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown ul li p),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown ul li strong),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown ul li em),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown ol li),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown ol li p),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown ol li strong),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown ol li em) {
+  color: var(--milkdown-list-color) !important;
 }
 
-:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown blockquote) {
-  border-left-color: var(--border-color);
-  color: var(--text-secondary);
+/* 引用块及内部的 p, strong, em 不覆盖 */
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown blockquote),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown blockquote p),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown blockquote strong),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown blockquote em) {
+  color: var(--milkdown-blockquote-color) !important;
 }
 
 :root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown table) {
@@ -1118,10 +1155,20 @@ watch(() => props.content, (newContent) => {
   font-size: var(--editor-font-size, 14px) !important;
 }
 
+/* 表格单元格及内部的 p, strong, em 不覆盖 */
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown table td),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown table td p),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown table td strong),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown table td em) {
+  color: var(--milkdown-table-color) !important;
+}
+
+/* 表格标题及内部的 p, strong, em 不覆盖 */
 :root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown table th),
-:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown table td) {
-  border-color: var(--border-color);
-  color: var(--text-primary);
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown table th p),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown table th strong),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown table th em) {
+  color: var(--milkdown-table-header-color) !important;
 }
 
 :root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown table th) {
@@ -1129,7 +1176,7 @@ watch(() => props.content, (newContent) => {
 }
 
 :root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown hr) {
-  border-color: var(--border-color);
+  border-color: var(--milkdown-hr-color);
 }
 
 :root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown a) {
@@ -1137,11 +1184,144 @@ watch(() => props.content, (newContent) => {
 }
 
 :root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown strong) {
-  color: var(--text-primary);
+  color: var(--milkdown-paragraph-color);
 }
 
 :root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown em) {
-  color: var(--text-primary);
+  color: var(--milkdown-paragraph-color);
+  font-style: italic;
+}
+
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown code) {
+  color: var(--milkdown-code-color);
+}
+
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown pre) {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+}
+
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown pre code) {
+  color: var(--milkdown-codeblock-color);
+}
+
+/* 任务列表及内部的 p, strong, em 不覆盖 */
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"]),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"] p),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"] strong),
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"] em) {
+  color: var(--milkdown-task-color) !important;
+}
+
+/* 亮色主题下的 Milkdown 块级元素颜色 */
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h1),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h2),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h3),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h4),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h5),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h6) {
+  color: var(--milkdown-heading-color) !important;
+}
+
+/* 标题内部的 p, strong, em 不覆盖 */
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h1 p),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h1 strong),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h1 em),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h2 p),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h2 strong),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h2 em),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h3 p),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h3 strong),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h3 em),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h4 p),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h4 strong),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h4 em),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h5 p),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h5 strong),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h5 em),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h6 p),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h6 strong),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown h6 em) {
+  color: var(--milkdown-heading-color) !important;
+}
+
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown p) {
+  color: var(--milkdown-paragraph-color);
+}
+
+/* 列表项及内部的 p, strong, em 不覆盖 */
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown li),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown li p),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown li strong),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown li em),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown ul li),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown ul li p),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown ul li strong),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown ul li em),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown ol li),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown ol li p),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown ol li strong),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown ol li em) {
+  color: var(--milkdown-list-color) !important;
+}
+
+/* 引用块及内部的 p, strong, em 不覆盖 */
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown blockquote),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown blockquote p),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown blockquote strong),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown blockquote em) {
+  color: var(--milkdown-blockquote-color) !important;
+}
+
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown table th),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown table td),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown table th p),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown table th strong),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown table th em),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown table td p),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown table td strong),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown table td em) {
+  color: var(--milkdown-table-color) !important;
+}
+
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown table th),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown table th p),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown table th strong),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown table th em) {
+  color: var(--milkdown-table-header-color) !important;
+}
+
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown hr) {
+  border-color: var(--milkdown-hr-color);
+}
+
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown strong) {
+  color: var(--milkdown-paragraph-color);
+}
+
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown em) {
+  color: var(--milkdown-paragraph-color);
+  font-style: italic;
+}
+
+/* 任务列表及内部的 p, strong, em 不覆盖 */
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"]),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"] p),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"] strong),
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"] em) {
+  color: var(--milkdown-task-color) !important;
+}
+
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown code) {
+  color: var(--milkdown-code-color);
+}
+
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown pre code) {
+  color: var(--milkdown-codeblock-color);
+}
+
+:root[data-theme='light'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"]) {
+  color: var(--milkdown-task-color);
 }
 
 /* 暗色主题下的文本选中样式 */
@@ -1189,7 +1369,6 @@ watch(() => props.content, (newContent) => {
   padding: 0.1em 0.3em;
   border-radius: 3px;
   font-family: 'Monaco', 'Menlo', monospace !important;
-  color: var(--text-primary);
 }
 
 .milkdown-wrapper :deep(.milkdown pre) {
@@ -1210,7 +1389,6 @@ watch(() => props.content, (newContent) => {
   border-left: 3px solid var(--border-color);
   margin-left: 0;
   padding-left: 1em;
-  color: var(--text-secondary);
   margin: 0.1em 0;
   font-family: var(--editor-font-family, 'Consolas, "Courier New", monospace') !important;
   font-size: var(--editor-font-size, 14px) !important;
