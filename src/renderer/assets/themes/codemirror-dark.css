@@ -4,11 +4,11 @@
 }
 
 :root[data-theme='dark'] .cm-scroller {
-  background: #1e1e1e;
+  background: #2d2d2d;
 }
 
 :root[data-theme='dark'] .cm-gutters {
-  background: #252526;
+  background: #333333;
   color: #666666;
   border-right: 1px solid #3c3c3c;
 }

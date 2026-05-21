@@ -1,12 +1,12 @@
 /* 暗色主题 */
 :root[data-theme='dark'] {
-  /* 背景色 */
-  --bg-primary: #1e1e1e;
-  --bg-secondary: #252526;
-  --bg-hover: #2d2d30;
-  --bg-selected: #3e3e42; /* 选中背景 - 更亮 */
+  /* 背景色 - 调整降低对比度，更柔和的灰色调 */
+  --bg-primary: #2d2d2d;
+  --bg-secondary: #333333;
+  --bg-hover: #3a3a3a;
+  --bg-selected: #454545; /* 选中背景 - 更亮 */
   --hover-bg: var(--bg-hover); /* 别名 */
-  --bg-elevated: #2d2d30;
+  --bg-elevated: #383838;
 
   /* 文本色 */
   --text-primary: #cccccc;
