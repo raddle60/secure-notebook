@@ -527,7 +527,8 @@ h1 {
 }
 
 .remove-dir-btn {
-  display: none;
+  visibility: hidden;
+  opacity: 0;
   align-items: center;
   justify-content: center;
   width: 24px;
@@ -548,7 +549,8 @@ h1 {
 }
 
 .recent-item:hover .remove-dir-btn {
-  display: flex;
+  visibility: visible;
+  opacity: 1;
 }
 
 .folder-icon {
