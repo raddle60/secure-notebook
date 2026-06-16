@@ -1,161 +1,169 @@
 <template>
-  <div class="dialog-overlay" @click.self="$emit('close')">
-    <div class="dialog">
-      <div class="dialog-header">
-        <h2>重置密码</h2>
-        <button class="close-btn" @click="$emit('close')">×</button>
-      </div>
-      <div class="dialog-body">
-        <!-- 步骤 1：选择 recovery.key 文件 -->
-        <div v-if="step === 1" class="step-section">
-          <p class="step-title">步骤 1：选择重置密钥文件</p>
-          <div class="file-select-section">
-            <input
-              v-model="recoveryKeyPath"
-              type="text"
-              placeholder="请选择 recovery_*.key 文件..."
-              class="file-input"
-              readonly
-            />
-            <button class="browse-btn" @click="selectRecoveryKey" :disabled="verifying">
-              浏览
-            </button>
-          </div>
-          <div v-if="recoveryKeyPath" class="file-info">
-            <span class="file-icon">🔑</span>
-            <span class="file-name-display">{{ getFileName(recoveryKeyPath) }}</span>
-          </div>
+  <BaseDialog
+    :model-value="modelValue"
+    @update:model-value="$emit('update:modelValue', $event)"
+    @close="$emit('close')"
+  >
+    <div class="dialog-header">
+      <h2>重置密码</h2>
+    </div>
+    <div class="dialog-body">
+      <!-- 步骤 1：选择 recovery.key 文件 -->
+      <div v-if="step === 1" class="step-section">
+        <p class="step-title">步骤 1：选择重置密钥文件</p>
+        <div class="file-select-section">
+          <input
+            v-model="recoveryKeyPath"
+            type="text"
+            placeholder="请选择 recovery_*.key 文件..."
+            class="file-input"
+            readonly
+          />
+          <button class="browse-btn" @click="selectRecoveryKey" :disabled="verifying">
+            浏览
+          </button>
         </div>
-
-        <!-- 步骤 2：验证 recovery.key -->
-        <div v-if="step === 2" class="step-section">
-          <p class="step-title">步骤 2：验证重置密钥</p>
-          <div v-if="verifying" class="verifying">
-            <div class="spinner"></div>
-            <p>正在验证重置密钥文件...</p>
-          </div>
-          <div v-else-if="verificationSuccess" class="verification-success">
-            <span class="success-icon">✓</span>
-            <p>验证成功！可以继续重置密码。</p>
-          </div>
-          <div v-else-if="verificationFailed" class="verification-failed">
-            <span class="failed-icon">✗</span>
-            <p>{{ verifyError }}</p>
-          </div>
-        </div>
-
-        <!-- 步骤 3：输入新密码 -->
-        <div v-if="step === 3" class="step-section">
-          <p class="step-title">步骤 3：设置新密码</p>
-          <div class="form-group">
-            <label class="form-label">新密码</label>
-            <input
-              v-model="newPassword"
-              type="password"
-              placeholder="输入新密码"
-              class="form-input"
-              autofocus
-              autocomplete="off"
-            />
-            <div class="password-rules">
-              <p :class="{ valid: passwordRules.length, invalid: !passwordRules.length && newPassword }">
-                {{ passwordRules.length ? '✓' : '○' }} 至少 8 个字符
-              </p>
-              <p :class="{ valid: passwordRules.hasLetter, invalid: !passwordRules.hasLetter && newPassword }">
-                {{ passwordRules.hasLetter ? '✓' : '○' }} 包含至少一个字母
-              </p>
-              <p :class="{ valid: passwordRules.hasNumber, invalid: !passwordRules.hasNumber && newPassword }">
-                {{ passwordRules.hasNumber ? '✓' : '○' }} 包含至少一个数字
-              </p>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">确认新密码</label>
-            <input
-              v-model="confirmPassword"
-              type="password"
-              placeholder="再次输入新密码"
-              class="form-input"
-              :class="{ 'input-invalid': confirmPassword && newPassword !== confirmPassword }"
-              autocomplete="off"
-            />
-          </div>
-          <div v-if="error" class="error-message">{{ error }}</div>
-        </div>
-
-        <!-- 步骤 4：执行重置 -->
-        <div v-if="step === 4" class="step-section">
-          <p class="step-title">步骤 4：执行重置</p>
-          <div v-if="resetting" class="resetting">
-            <div class="spinner"></div>
-            <p>正在重置密码...</p>
-          </div>
-          <div v-else-if="resetSuccess" class="reset-success">
-            <span class="success-icon">✓</span>
-            <p>密码重置成功！</p>
-          </div>
-          <div v-else-if="resetFailed" class="reset-failed">
-            <span class="failed-icon">✗</span>
-            <p>{{ resetError }}</p>
-          </div>
+        <div v-if="recoveryKeyPath" class="file-info">
+          <span class="file-icon">🔑</span>
+          <span class="file-name-display">{{ getFileName(recoveryKeyPath) }}</span>
         </div>
       </div>
 
-      <div class="dialog-footer">
-        <button v-if="step > 1 && step < 4 && !verifying && !resetting" class="btn-secondary" @click="prevStep">
-          上一步
-        </button>
-        <button
-          v-if="step === 1"
-          class="btn-primary"
-          @click="goToStep2"
-          :disabled="!recoveryKeyPath"
-        >
-          验证密钥文件
-        </button>
-        <button
-          v-if="step === 2 && verificationSuccess"
-          class="btn-primary"
-          @click="goToStep3"
-        >
-          继续
-        </button>
-        <button
-          v-if="step === 3"
-          class="btn-primary"
-          @click="goToStep4"
-          :disabled="!canSubmit"
-        >
-          重置密码
-        </button>
-        <button
-          v-if="step === 4 && resetSuccess"
-          class="btn-primary"
-          @click="handleComplete"
-        >
-          完成
-        </button>
-        <button
-          v-if="(step === 2 && verificationFailed) || (step === 4 && resetFailed)"
-          class="btn-primary"
-          @click="retryStep"
-        >
-          重试
-        </button>
+      <!-- 步骤 2：验证 recovery.key -->
+      <div v-if="step === 2" class="step-section">
+        <p class="step-title">步骤 2：验证重置密钥</p>
+        <div v-if="verifying" class="verifying">
+          <div class="spinner"></div>
+          <p>正在验证重置密钥文件...</p>
+        </div>
+        <div v-else-if="verificationSuccess" class="verification-success">
+          <span class="success-icon">✓</span>
+          <p>验证成功！可以继续重置密码。</p>
+        </div>
+        <div v-else-if="verificationFailed" class="verification-failed">
+          <span class="failed-icon">✗</span>
+          <p>{{ verifyError }}</p>
+        </div>
+      </div>
+
+      <!-- 步骤 3：输入新密码 -->
+      <div v-if="step === 3" class="step-section">
+        <p class="step-title">步骤 3：设置新密码</p>
+        <div class="form-group">
+          <label class="form-label">新密码</label>
+          <input
+            v-model="newPassword"
+            type="password"
+            placeholder="输入新密码"
+            class="form-input"
+            autofocus
+            autocomplete="off"
+          />
+          <div class="password-rules">
+            <p :class="{ valid: passwordRules.length, invalid: !passwordRules.length && newPassword }">
+              {{ passwordRules.length ? '✓' : '○' }} 至少 8 个字符
+            </p>
+            <p :class="{ valid: passwordRules.hasLetter, invalid: !passwordRules.hasLetter && newPassword }">
+              {{ passwordRules.hasLetter ? '✓' : '○' }} 包含至少一个字母
+            </p>
+            <p :class="{ valid: passwordRules.hasNumber, invalid: !passwordRules.hasNumber && newPassword }">
+              {{ passwordRules.hasNumber ? '✓' : '○' }} 包含至少一个数字
+            </p>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">确认新密码</label>
+          <input
+            v-model="confirmPassword"
+            type="password"
+            placeholder="再次输入新密码"
+            class="form-input"
+            :class="{ 'input-invalid': confirmPassword && newPassword !== confirmPassword }"
+            autocomplete="off"
+          />
+        </div>
+        <div v-if="error" class="error-message">{{ error }}</div>
+      </div>
+
+      <!-- 步骤 4：执行重置 -->
+      <div v-if="step === 4" class="step-section">
+        <p class="step-title">步骤 4：执行重置</p>
+        <div v-if="resetting" class="resetting">
+          <div class="spinner"></div>
+          <p>正在重置密码...</p>
+        </div>
+        <div v-else-if="resetSuccess" class="reset-success">
+          <span class="success-icon">✓</span>
+          <p>密码重置成功！</p>
+        </div>
+        <div v-else-if="resetFailed" class="reset-failed">
+          <span class="failed-icon">✗</span>
+          <p>{{ resetError }}</p>
+        </div>
       </div>
     </div>
-  </div>
+
+    <div class="dialog-footer">
+      <button v-if="step > 1 && step < 4 && !verifying && !resetting" class="btn-secondary" @click="prevStep">
+        上一步
+      </button>
+      <button
+        v-if="step === 1"
+        class="btn-primary"
+        @click="goToStep2"
+        :disabled="!recoveryKeyPath"
+      >
+        验证密钥文件
+      </button>
+      <button
+        v-if="step === 2 && verificationSuccess"
+        class="btn-primary"
+        @click="goToStep3"
+      >
+        继续
+      </button>
+      <button
+        v-if="step === 3"
+        class="btn-primary"
+        @click="goToStep4"
+        :disabled="!canSubmit"
+      >
+        重置密码
+      </button>
+      <button
+        v-if="step === 4 && resetSuccess"
+        class="btn-primary"
+        @click="handleComplete"
+      >
+        完成
+      </button>
+      <button
+        v-if="(step === 2 && verificationFailed) || (step === 4 && resetFailed)"
+        class="btn-primary"
+        @click="retryStep"
+      >
+        重试
+      </button>
+    </div>
+  </BaseDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useVault } from '../composables/useVault'
+import BaseDialog from './common/BaseDialog.vue'
 
 const props = defineProps<{
+  modelValue: boolean
   vaultDir: string
 }>()
 
-const emit = defineEmits<{ close: []; success: [] }>()
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean]
+  'close': []
+  'success': []
+}>()
+
 const { verifyRecoveryKey, resetPassword, hasNoteForReset } = useVault()
 
 const step = ref(1)
@@ -210,7 +218,6 @@ async function selectRecoveryKey() {
 async function goToStep2() {
   if (!recoveryKeyPath.value) return
 
-  // 步骤 2.1: 先验证笔记条数是否大于 0
   verifying.value = true
   verificationSuccess.value = false
   verificationFailed.value = false
@@ -225,7 +232,6 @@ async function goToStep2() {
       return
     }
 
-    // 步骤 2.2: 验证重置密钥文件
     const result = await verifyRecoveryKey(recoveryKeyPath.value, props.vaultDir)
     if (result.valid) {
       verificationSuccess.value = true
@@ -269,7 +275,6 @@ async function goToStep4() {
     if (result.success) {
       resetSuccess.value = true
       step.value = 4
-      // 成功后立即清空密码
       newPassword.value = ''
       confirmPassword.value = ''
     } else {
@@ -301,25 +306,6 @@ function handleComplete() {
 </script>
 
 <style scoped>
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.dialog {
-  background: var(--bg-primary);
-  border-radius: 8px;
-  width: 480px;
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-}
-
 .dialog-header {
   display: flex;
   justify-content: space-between;
@@ -331,14 +317,7 @@ function handleComplete() {
 .dialog-header h2 {
   font-size: 16px;
   font-weight: 600;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: var(--text-secondary);
+  margin: 0;
 }
 
 .dialog-body {
@@ -380,7 +359,6 @@ function handleComplete() {
   border-color: var(--accent-color);
 }
 
-/* 暗色主题下使用更柔和的聚焦边框 */
 :root[data-theme='dark'] .file-input:focus {
   border-color: var(--bg-selected);
 }

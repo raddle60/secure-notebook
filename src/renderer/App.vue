@@ -38,7 +38,7 @@
       </div>
     </div>
 
-    <SettingsDialog v-if="showSettings" @close="showSettings = false" />
+    <SettingsDialog v-if="showSettings" v-model="showSettings" @close="showSettings = false" />
   </div>
 </template>
 

@@ -1,76 +1,86 @@
 <template>
-  <div class="dialog-overlay" @click.self="$emit('close')">
-    <div class="dialog">
-      <div class="dialog-header">
-        <h2>修改密码</h2>
-        <button class="close-btn" @click="$emit('close')">×</button>
-      </div>
-      <div class="dialog-body">
-        <form @submit.prevent="handleChangePassword">
-          <div class="form-group">
-            <label class="form-label">旧密码</label>
-            <input
-              v-model="oldPassword"
-              type="password"
-              placeholder="输入旧密码"
-              class="form-input"
-              autofocus
-              autocomplete="off"
-            />
-          </div>
-          <div class="form-group">
-            <label class="form-label">新密码</label>
-            <input
-              v-model="newPassword"
-              type="password"
-              placeholder="输入新密码"
-              class="form-input"
-              autocomplete="off"
-            />
-            <p v-if="newPassword && newPassword.length < 8" class="hint error">
-              密码至少 8 个字符
-            </p>
-            <p v-if="newPassword && !/[a-zA-Z]/.test(newPassword)" class="hint error">
-              密码必须包含至少一个字母
-            </p>
-            <p v-if="newPassword && !/[0-9]/.test(newPassword)" class="hint error">
-              密码必须包含至少一个数字
-            </p>
-          </div>
-          <div class="form-group">
-            <label class="form-label">确认新密码</label>
-            <input
-              v-model="confirmPassword"
-              type="password"
-              placeholder="再次输入新密码"
-              class="form-input"
-              autocomplete="off"
-            />
-          </div>
-          <p v-if="error" class="error-message">{{ error }}</p>
-          <div class="form-actions">
-            <button type="button" class="btn-secondary" @click="$emit('close')">
-              取消
-            </button>
-            <button
-              type="submit"
-              class="btn-primary"
-              :disabled="!canSubmit || loading"
-            >
-              {{ loading ? '修改中...' : '确认修改' }}
-            </button>
-          </div>
-        </form>
-      </div>
+  <BaseDialog
+    :model-value="modelValue"
+    @update:model-value="$emit('update:modelValue', $event)"
+    @close="$emit('close')"
+  >
+    <div class="dialog-header">
+      <h2>修改密码</h2>
     </div>
-  </div>
+    <div class="dialog-body">
+      <form @submit.prevent="handleChangePassword">
+        <div class="form-group">
+          <label class="form-label">旧密码</label>
+          <input
+            v-model="oldPassword"
+            type="password"
+            placeholder="输入旧密码"
+            class="form-input"
+            autofocus
+            autocomplete="off"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label">新密码</label>
+          <input
+            v-model="newPassword"
+            type="password"
+            placeholder="输入新密码"
+            class="form-input"
+            autocomplete="off"
+          />
+          <p v-if="newPassword && newPassword.length < 8" class="hint error">
+            密码至少 8 个字符
+          </p>
+          <p v-if="newPassword && !/[a-zA-Z]/.test(newPassword)" class="hint error">
+            密码必须包含至少一个字母
+          </p>
+          <p v-if="newPassword && !/[0-9]/.test(newPassword)" class="hint error">
+            密码必须包含至少一个数字
+          </p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">确认新密码</label>
+          <input
+            v-model="confirmPassword"
+            type="password"
+            placeholder="再次输入新密码"
+            class="form-input"
+            autocomplete="off"
+          />
+        </div>
+        <p v-if="error" class="error-message">{{ error }}</p>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" @click="$emit('close')">
+            取消
+          </button>
+          <button
+            type="submit"
+            class="btn-primary"
+            :disabled="!canSubmit || loading"
+          >
+            {{ loading ? '修改中...' : '确认修改' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </BaseDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useVault } from '../composables/useVault'
+import BaseDialog from './common/BaseDialog.vue'
 
-const emit = defineEmits<{ close: [] }>()
+defineProps<{
+  modelValue: boolean
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean]
+  'close': []
+}>()
+
 const { changePassword } = useVault()
 
 const oldPassword = ref('')
@@ -95,7 +105,6 @@ const canSubmit = computed(() => {
 async function handleChangePassword() {
   error.value = ''
 
-  // 验证新密码
   const hasLetter = /[a-zA-Z]/.test(newPassword.value)
   const hasNumber = /[0-9]/.test(newPassword.value)
   if (newPassword.value.length < 8) {
@@ -125,7 +134,6 @@ async function handleChangePassword() {
   try {
     const result = await changePassword(oldPassword.value, newPassword.value)
     if (result.success) {
-      // 成功后立即清空密码
       oldPassword.value = ''
       newPassword.value = ''
       confirmPassword.value = ''
@@ -143,22 +151,6 @@ async function handleChangePassword() {
 </script>
 
 <style scoped>
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.dialog {
-  background: var(--bg-primary);
-  border-radius: 8px;
-  width: 400px;
-}
-
 .dialog-header {
   display: flex;
   justify-content: space-between;
@@ -170,14 +162,7 @@ async function handleChangePassword() {
 .dialog-header h2 {
   font-size: 16px;
   font-weight: 600;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: var(--text-secondary);
+  margin: 0;
 }
 
 .dialog-body {
@@ -212,12 +197,10 @@ async function handleChangePassword() {
   border-color: var(--accent-color);
 }
 
-/* 暗色主题下使用不同的边框颜色 */
 :root[data-theme='dark'] .form-input:focus {
   border-color: var(--bg-selected);
 }
 
-/* 密码输入框文本颜色（包括占位符和圆点） */
 .form-input[type="password"] {
   color: var(--text-primary);
   -webkit-text-fill-color: var(--text-primary);
@@ -284,7 +267,6 @@ async function handleChangePassword() {
   cursor: not-allowed;
 }
 
-/* 暗色主题下使用不同的背景色 */
 :root[data-theme='dark'] .btn-primary {
   background: var(--bg-selected);
 }

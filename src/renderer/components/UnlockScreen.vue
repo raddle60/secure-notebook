@@ -153,6 +153,7 @@
       <!-- 重置密码对话框 -->
       <ResetPasswordDialog
         v-if="showResetPassword"
+        v-model="showResetPassword"
         :vault-dir="selectedDir"
         @close="showResetPassword = false"
         @success="handleResetSuccess"

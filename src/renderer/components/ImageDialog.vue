@@ -1,33 +1,36 @@
 <template>
-  <div v-if="modelValue" class="image-dialog-overlay" @click="handleCancel">
-    <div class="image-dialog" @click.stop>
-      <h3 class="dialog-title">插入图片</h3>
-      <div class="image-list" v-if="imageAttachments.length > 0">
-        <div
-          v-for="att in imageAttachments"
-          :key="att.id"
-          class="image-item"
-          :class="{ selected: selectedId === att.id }"
-          @click="selectedId = att.id"
-        >
-          <span class="image-icon">🖼️</span>
-          <span class="image-name">{{ att.filename }}</span>
-          <span class="image-size">{{ formatSize(att.size) }}</span>
-        </div>
-      </div>
-      <div class="empty-image" v-else>
-        暂无图片附件
-      </div>
-      <div class="dialog-actions">
-        <button class="btn-cancel" @click="handleCancel">取消</button>
-        <button class="btn-confirm" @click="handleConfirm" :disabled="!selectedId">确定</button>
+  <BaseDialog
+    :model-value="modelValue"
+    @update:model-value="$emit('update:modelValue', $event)"
+    @close="handleCancel"
+  >
+    <h3 class="dialog-title">插入图片</h3>
+    <div class="image-list" v-if="imageAttachments.length > 0">
+      <div
+        v-for="att in imageAttachments"
+        :key="att.id"
+        class="image-item"
+        :class="{ selected: selectedId === att.id }"
+        @click="selectedId = att.id"
+      >
+        <span class="image-icon">🖼️</span>
+        <span class="image-name">{{ att.filename }}</span>
+        <span class="image-size">{{ formatSize(att.size) }}</span>
       </div>
     </div>
-  </div>
+    <div class="empty-image" v-else>
+      暂无图片附件
+    </div>
+    <div class="dialog-actions">
+      <button class="btn-cancel" @click="handleCancel">取消</button>
+      <button class="btn-confirm" @click="handleConfirm" :disabled="!selectedId">确定</button>
+    </div>
+  </BaseDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
+import BaseDialog from './common/BaseDialog.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -42,7 +45,6 @@ const emit = defineEmits<{
 const attachments = ref<any[]>([])
 const selectedId = ref<string | null>(null)
 
-// 只显示图片类型的附件
 const imageAttachments = computed(() => {
   return attachments.value.filter(att => {
     const mime = att.mime_type || ''
@@ -61,7 +63,6 @@ async function handleConfirm() {
   if (selectedId.value) {
     const attachment = attachments.value.find(a => a.id === selectedId.value)
     if (attachment) {
-      // 获取附件数据
       const data = await window.vaultAPI.attachments.get(selectedId.value)
       emit('select', {
         id: selectedId.value,
@@ -85,35 +86,12 @@ function formatSize(bytes: number): string {
 </script>
 
 <style scoped>
-.image-dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-}
-
-.image-dialog {
-  background: var(--bg-primary);
-  border-radius: 8px;
-  padding: 20px;
-  width: 400px;
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
 .dialog-title {
   margin: 0 0 16px 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
+  padding-right: 32px;
 }
 
 .image-list {

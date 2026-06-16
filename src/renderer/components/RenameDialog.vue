@@ -1,24 +1,27 @@
 <template>
-  <div v-if="modelValue" class="rename-dialog-overlay" @click="handleCancel">
-    <div class="rename-dialog" @click.stop>
-      <h3 class="dialog-title">{{ title }}</h3>
-      <input
-        ref="inputRef"
-        v-model="inputValue"
-        class="dialog-input"
-        @keyup.enter="handleConfirm"
-        @keyup.esc="handleCancel"
-      />
-      <div class="dialog-actions">
-        <button class="btn-cancel" @click="handleCancel">取消</button>
-        <button class="btn-confirm" @click="handleConfirm">确定</button>
-      </div>
+  <BaseDialog
+    :model-value="modelValue"
+    @update:model-value="$emit('update:modelValue', $event)"
+    @close="handleCancel"
+  >
+    <h3 class="dialog-title">{{ title }}</h3>
+    <input
+      ref="inputRef"
+      v-model="inputValue"
+      class="dialog-input"
+      @keyup.enter="handleConfirm"
+      @keyup.esc="handleCancel"
+    />
+    <div class="dialog-actions">
+      <button class="btn-cancel" @click="handleCancel">取消</button>
+      <button class="btn-confirm" @click="handleConfirm">确定</button>
     </div>
-  </div>
+  </BaseDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
+import BaseDialog from './common/BaseDialog.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -56,33 +59,12 @@ function handleCancel() {
 </script>
 
 <style scoped>
-.rename-dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-}
-
-.rename-dialog {
-  background: var(--bg-primary);
-  border-radius: 8px;
-  padding: 20px;
-  min-width: 300px;
-  max-width: 400px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
 .dialog-title {
   margin: 0 0 16px 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
+  padding-right: 32px;
 }
 
 .dialog-input {

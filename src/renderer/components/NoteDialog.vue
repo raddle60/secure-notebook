@@ -1,48 +1,51 @@
 <template>
-  <div v-if="modelValue" class="note-dialog-overlay" @click="handleCancel">
-    <div class="note-dialog" @click.stop>
-      <h3 class="dialog-title">
-        {{ title }}{{ folderName ? `（${folderName}）` : '' }}
-      </h3>
-      <input
-        ref="inputRef"
-        v-model="inputValue"
-        class="dialog-input"
-        placeholder="请输入笔记标题"
-        @keyup.enter="handleConfirm"
-        @keyup.esc="handleCancel"
-      />
-      <div class="format-selector">
-        <label class="format-label">笔记格式：</label>
-        <div class="format-options">
-          <label
-            v-for="format in formats"
-            :key="format.value"
-            class="format-option"
-            :class="{ active: selectedFormat === format.value }"
-          >
-            <input
-              type="radio"
-              name="format"
-              :value="format.value"
-              v-model="selectedFormat"
-              class="format-radio"
-            />
-            <span class="format-icon" :class="format.icon"></span>
-            <span class="format-name">{{ format.label }}</span>
-          </label>
-        </div>
-      </div>
-      <div class="dialog-actions">
-        <button class="btn-cancel" @click="handleCancel">取消</button>
-        <button class="btn-confirm" @click="handleConfirm">确定</button>
+  <BaseDialog
+    :model-value="modelValue"
+    @update:model-value="$emit('update:modelValue', $event)"
+    @close="handleCancel"
+  >
+    <h3 class="dialog-title">
+      {{ title }}{{ folderName ? `（${folderName}）` : '' }}
+    </h3>
+    <input
+      ref="inputRef"
+      v-model="inputValue"
+      class="dialog-input"
+      placeholder="请输入笔记标题"
+      @keyup.enter="handleConfirm"
+      @keyup.esc="handleCancel"
+    />
+    <div class="format-selector">
+      <label class="format-label">笔记格式：</label>
+      <div class="format-options">
+        <label
+          v-for="format in formats"
+          :key="format.value"
+          class="format-option"
+          :class="{ active: selectedFormat === format.value }"
+        >
+          <input
+            type="radio"
+            name="format"
+            :value="format.value"
+            v-model="selectedFormat"
+            class="format-radio"
+          />
+          <span class="format-icon" :class="format.icon"></span>
+          <span class="format-name">{{ format.label }}</span>
+        </label>
       </div>
     </div>
-  </div>
+    <div class="dialog-actions">
+      <button class="btn-cancel" @click="handleCancel">取消</button>
+      <button class="btn-confirm" @click="handleConfirm">确定</button>
+    </div>
+  </BaseDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
+import BaseDialog from './common/BaseDialog.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -72,7 +75,6 @@ watch(() => props.modelValue, async (val) => {
     inputValue.value = props.defaultValue
     selectedFormat.value = 'plain'
     await nextTick()
-    // 使用 setTimeout 确保 DOM 完全渲染后再聚焦
     setTimeout(() => {
       inputRef.value?.focus()
       inputRef.value?.select()
@@ -94,33 +96,12 @@ function handleCancel() {
 </script>
 
 <style scoped>
-.note-dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-}
-
-.note-dialog {
-  background: var(--bg-primary);
-  border-radius: 8px;
-  padding: 20px;
-  min-width: 360px;
-  max-width: 420px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
 .dialog-title {
   margin: 0 0 16px 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
+  padding-right: 32px;
 }
 
 .dialog-input {
@@ -140,7 +121,6 @@ function handleCancel() {
   border-color: var(--accent-color);
 }
 
-/* 暗色主题下使用更柔和的边框颜色 */
 :root[data-theme='dark'] .dialog-input:focus {
   border-color: var(--bg-selected);
 }
@@ -178,7 +158,6 @@ function handleCancel() {
   border-color: var(--accent-color);
 }
 
-/* 暗色主题下使用不同的边框颜色 */
 :root[data-theme='dark'] .format-option:hover {
   border-color: var(--bg-selected);
 }
@@ -189,7 +168,6 @@ function handleCancel() {
   box-shadow: 0 0 0 2px var(--accent-color);
 }
 
-/* 暗色主题下使用更柔和的边框颜色 */
 :root[data-theme='dark'] .format-option.active {
   border-color: var(--bg-selected);
   box-shadow: 0 0 0 2px var(--bg-selected);
@@ -209,7 +187,6 @@ function handleCancel() {
   justify-content: center;
 }
 
-/* SVG 图标样式 */
 .format-icon.svg-note-plain,
 .format-icon.svg-note-markdown,
 .format-icon.svg-note-richtext {
@@ -277,7 +254,6 @@ function handleCancel() {
   opacity: 0.9;
 }
 
-/* 暗色主题下使用不同的背景色 */
 :root[data-theme='dark'] .btn-confirm {
   background: var(--bg-selected);
 }

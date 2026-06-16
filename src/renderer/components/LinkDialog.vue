@@ -1,60 +1,63 @@
 <template>
-  <div v-if="modelValue" class="link-dialog-overlay" @click="handleCancel">
-    <div class="link-dialog" @click.stop>
-      <h3 class="dialog-title">{{ isEditMode ? '编辑链接' : (linkType === 'url' ? '插入链接' : '插入附件链接') }}</h3>
+  <BaseDialog
+    :model-value="modelValue"
+    @update:model-value="$emit('update:modelValue', $event)"
+    @close="handleCancel"
+  >
+    <h3 class="dialog-title">{{ isEditMode ? '编辑链接' : (linkType === 'url' ? '插入链接' : '插入附件链接') }}</h3>
 
-      <!-- URL 输入模式 -->
-      <div v-if="linkType === 'url'" class="url-input-section">
-        <div class="input-group">
-          <label class="input-label">链接文本</label>
-          <input
-            ref="textInputRef"
-            v-model="textValue"
-            class="url-input"
-            placeholder="请输入链接文本"
-          />
-        </div>
-        <div class="input-group">
-          <label class="input-label">链接地址</label>
-          <input
-            ref="urlInputRef"
-            v-model="urlValue"
-            class="url-input"
-            placeholder="https://example.com"
-            @keyup.enter="handleUrlConfirm"
-          />
-        </div>
+    <!-- URL 输入模式 -->
+    <div v-if="linkType === 'url'" class="url-input-section">
+      <div class="input-group">
+        <label class="input-label">链接文本</label>
+        <input
+          ref="textInputRef"
+          v-model="textValue"
+          class="url-input"
+          placeholder="请输入链接文本"
+        />
       </div>
-
-      <!-- 附件选择模式 -->
-      <div class="attachment-list" v-else-if="attachments.length > 0">
-        <div
-          v-for="att in attachments"
-          :key="att.id"
-          class="attachment-item"
-          :class="{ selected: selectedId === att.id }"
-          @click="selectedId = att.id"
-        >
-          <span class="attachment-icon">{{ getFileIcon(att.mime_type) }}</span>
-          <span class="attachment-name">{{ att.filename }}</span>
-          <span class="attachment-size">{{ formatSize(att.size) }}</span>
-        </div>
-      </div>
-      <div class="empty-attachment" v-else>
-        暂无附件，请先上传附件
-      </div>
-
-      <div class="dialog-actions">
-        <button class="btn-cancel" @click="handleCancel">取消</button>
-        <button class="btn-confirm" v-if="linkType === 'attachment'" @click="handleConfirm" :disabled="!selectedId">确定</button>
-        <button class="btn-confirm" v-else @click="handleUrlConfirm" :disabled="!urlValue.trim()">确定</button>
+      <div class="input-group">
+        <label class="input-label">链接地址</label>
+        <input
+          ref="urlInputRef"
+          v-model="urlValue"
+          class="url-input"
+          placeholder="https://example.com"
+          @keyup.enter="handleUrlConfirm"
+        />
       </div>
     </div>
-  </div>
+
+    <!-- 附件选择模式 -->
+    <div class="attachment-list" v-else-if="attachments.length > 0">
+      <div
+        v-for="att in attachments"
+        :key="att.id"
+        class="attachment-item"
+        :class="{ selected: selectedId === att.id }"
+        @click="selectedId = att.id"
+      >
+        <span class="attachment-icon">{{ getFileIcon(att.mime_type) }}</span>
+        <span class="attachment-name">{{ att.filename }}</span>
+        <span class="attachment-size">{{ formatSize(att.size) }}</span>
+      </div>
+    </div>
+    <div class="empty-attachment" v-else>
+      暂无附件，请先上传附件
+    </div>
+
+    <div class="dialog-actions">
+      <button class="btn-cancel" @click="handleCancel">取消</button>
+      <button class="btn-confirm" v-if="linkType === 'attachment'" @click="handleConfirm" :disabled="!selectedId">确定</button>
+      <button class="btn-confirm" v-else @click="handleUrlConfirm" :disabled="!urlValue.trim()">确定</button>
+    </div>
+  </BaseDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
+import BaseDialog from './common/BaseDialog.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -82,11 +85,9 @@ watch(() => props.modelValue, async (visible) => {
   if (visible) {
     if (props.linkType === 'url') {
       if (props.isEditMode) {
-        // 编辑模式：填充现有值
         urlValue.value = props.editLinkHref || ''
         textValue.value = props.editLinkText || ''
       } else {
-        // 插入模式：使用传入的文本（选中的文字）或清空
         urlValue.value = ''
         textValue.value = props.editLinkText || ''
       }
@@ -144,35 +145,12 @@ function formatSize(bytes: number): string {
 </script>
 
 <style scoped>
-.link-dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-}
-
-.link-dialog {
-  background: var(--bg-primary);
-  border-radius: 8px;
-  padding: 20px;
-  width: 400px;
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
 .dialog-title {
   margin: 0 0 16px 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
+  padding-right: 32px;
 }
 
 .url-input-section {
@@ -246,7 +224,6 @@ function formatSize(bytes: number): string {
   filter: brightness(0.85);
 }
 
-/* 暗色主题下进一步降低图标亮度 */
 :root[data-theme='dark'] .attachment-icon {
   filter: brightness(0.7);
 }

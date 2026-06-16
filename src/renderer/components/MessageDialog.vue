@@ -1,16 +1,20 @@
 <template>
-  <div v-if="modelValue" class="message-dialog-overlay" @click="handleClose">
-    <div class="message-dialog" @click.stop>
-      <h3 class="dialog-title">{{ title }}</h3>
-      <p class="dialog-message">{{ message }}</p>
-      <div class="dialog-actions">
-        <button class="btn-ok" @click="handleClose">确定</button>
-      </div>
+  <BaseDialog
+    :model-value="modelValue"
+    @update:model-value="$emit('update:modelValue', $event)"
+    @close="handleClose"
+  >
+    <h3 class="dialog-title">{{ title }}</h3>
+    <p class="dialog-message">{{ message }}</p>
+    <div class="dialog-actions">
+      <button class="btn-ok" @click="handleClose">确定</button>
     </div>
-  </div>
+  </BaseDialog>
 </template>
 
 <script setup lang="ts">
+import BaseDialog from './common/BaseDialog.vue'
+
 const props = defineProps<{
   modelValue: boolean
   title: string
@@ -29,33 +33,12 @@ function handleClose() {
 </script>
 
 <style scoped>
-.message-dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-}
-
-.message-dialog {
-  background: var(--bg-primary);
-  border-radius: 8px;
-  padding: 24px;
-  min-width: 320px;
-  max-width: 400px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
 .dialog-title {
   margin: 0 0 12px 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
+  padding-right: 32px;
 }
 
 .dialog-message {
@@ -85,7 +68,6 @@ function handleClose() {
   opacity: 0.9;
 }
 
-/* 暗色主题下使用不同的背景色 */
 :root[data-theme='dark'] .btn-ok {
   background: var(--bg-selected);
 }

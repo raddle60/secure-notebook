@@ -1,80 +1,92 @@
 <template>
-  <div class="dialog-overlay" @click.self="$emit('close')">
-    <div class="dialog">
-      <div class="dialog-header">
-        <h2>生成重置密钥文件</h2>
-        <button class="close-btn" @click="$emit('close')">×</button>
-      </div>
-      <div class="dialog-body">
-        <!-- 成功提示 -->
-        <div v-if="successMessage" class="success-message">
-          <span class="success-icon">✓</span>
-          <p>{{ successMessage }}</p>
-        </div>
-
-        <div class="info-section">
-          <p class="info-title">
-            <span class="icon">🔑</span>
-            重置密钥文件说明
-          </p>
-          <ul class="info-list">
-            <li>此文件用于忘记密码时重置密码</li>
-            <li>请将文件保存到安全位置， <strong>防止密钥泄露</strong></li>
-            <li><strong>不要</strong> 与数据目录放在同一位置</li>
-            <li>这是第 <span class="count-highlight">{{ genCount + 1 }}</span> 次生成</li>
-          </ul>
-        </div>
-
-        <div class="file-info-section">
-          <p class="file-label">文件名：</p>
-          <p class="file-name">{{ suggestedFilename }}</p>
-        </div>
-
-        <div v-if="error" class="error-message">{{ error }}</div>
-
-        <div class="save-location-section">
-          <p class="location-label">选择保存目录：</p>
-          <div class="location-input-row">
-            <input
-              v-model="saveDir"
-              type="text"
-              placeholder="请选择保存目录..."
-              class="location-input"
-              readonly
-            />
-            <button class="browse-btn" @click="selectSaveDir" :disabled="generating">
-              浏览
-            </button>
-          </div>
-        </div>
+  <BaseDialog
+    :model-value="modelValue"
+    @update:model-value="$emit('update:modelValue', $event)"
+    @close="$emit('close')"
+  >
+    <div class="dialog-header">
+      <h2>生成重置密钥文件</h2>
+    </div>
+    <div class="dialog-body">
+      <!-- 成功提示 -->
+      <div v-if="successMessage" class="success-message">
+        <span class="success-icon">✓</span>
+        <p>{{ successMessage }}</p>
       </div>
 
-      <div class="dialog-footer">
-        <button v-if="successMessage" class="btn-primary" @click="$emit('close')">
-          完成
-        </button>
-        <template v-else>
-          <button class="btn-skip" @click="handleSkip" :disabled="generating">
-            取消
+      <div class="info-section">
+        <p class="info-title">
+          <span class="icon">🔑</span>
+          重置密钥文件说明
+        </p>
+        <ul class="info-list">
+          <li>此文件用于忘记密码时重置密码</li>
+          <li>请将文件保存到安全位置， <strong>防止密钥泄露</strong></li>
+          <li><strong>不要</strong> 与数据目录放在同一位置</li>
+          <li>这是第 <span class="count-highlight">{{ genCount + 1 }}</span> 次生成</li>
+        </ul>
+      </div>
+
+      <div class="file-info-section">
+        <p class="file-label">文件名：</p>
+        <p class="file-name">{{ suggestedFilename }}</p>
+      </div>
+
+      <div v-if="error" class="error-message">{{ error }}</div>
+
+      <div class="save-location-section">
+        <p class="location-label">选择保存目录：</p>
+        <div class="location-input-row">
+          <input
+            v-model="saveDir"
+            type="text"
+            placeholder="请选择保存目录..."
+            class="location-input"
+            readonly
+          />
+          <button class="browse-btn" @click="selectSaveDir" :disabled="generating">
+            浏览
           </button>
-          <button
-            class="btn-primary"
-            @click="handleGenerate"
-            :disabled="!saveDir || generating"
-          >
-            {{ generating ? '生成中...' : '生成并保存' }}
-          </button>
-        </template>
+        </div>
       </div>
     </div>
-  </div>
+
+    <div class="dialog-footer">
+      <button v-if="successMessage" class="btn-primary" @click="$emit('close')">
+        完成
+      </button>
+      <template v-else>
+        <button class="btn-skip" @click="handleSkip" :disabled="generating">
+          取消
+        </button>
+        <button
+          class="btn-primary"
+          @click="handleGenerate"
+          :disabled="!saveDir || generating"
+        >
+          {{ generating ? '生成中...' : '生成并保存' }}
+        </button>
+      </template>
+    </div>
+  </BaseDialog>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useVault } from '../composables/useVault'
+import BaseDialog from './common/BaseDialog.vue'
 
-const emit = defineEmits<{ close: []; skipped: []; generated: [] }>()
+defineProps<{
+  modelValue: boolean
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean]
+  'close': []
+  'skipped': []
+  'generated': []
+}>()
+
 const { getRecoveryKeyGenCount, generateRecoveryKey, selectRecoveryKeySaveDir, getCurrentDirName } = useVault()
 
 const genCount = ref(0)
@@ -93,7 +105,6 @@ const suggestedFilename = computed(() => {
     String(now.getMinutes()).padStart(2, '0') +
     String(now.getSeconds()).padStart(2, '0')
 
-  // 清理目录名称中的非法字符
   const sanitizedVaultDirName = vaultDirName.value.replace(/[<>:"/\\|?*]/g, '_')
 
   return `recovery_${sanitizedVaultDirName}_${timestamp}_${genCount.value + 1}.key`
@@ -143,25 +154,6 @@ async function handleGenerate() {
 </script>
 
 <style scoped>
-.dialog-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.dialog {
-  background: var(--bg-primary);
-  border-radius: 8px;
-  width: 480px;
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-}
-
 .dialog-header {
   display: flex;
   justify-content: space-between;
@@ -173,14 +165,7 @@ async function handleGenerate() {
 .dialog-header h2 {
   font-size: 16px;
   font-weight: 600;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: var(--text-secondary);
+  margin: 0;
 }
 
 .dialog-body {
