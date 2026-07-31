@@ -1,5 +1,5 @@
 <template>
-  <div class="richtext-editor">
+  <div class="richtext-editor" ref="rootRef">
     <!-- URL 链接对话框 -->
     <LinkDialog
       v-model="showUrlDialog"
@@ -230,6 +230,23 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="16 18 22 12 16 6"/>
             <polyline points="8 6 2 12 8 18"/>
+          </svg>
+        </button>
+        <button
+          @click="toggleSecretMark"
+          :class="{ active: cursorInSecret }"
+          :disabled="!editor.can().toggleMark('secret')"
+          :title="cursorInSecret ? '取消密文遮罩' : '密文遮罩（仅遮挡显示，复制仍为原文）'"
+        >
+          <svg v-if="cursorInSecret" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+            <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
           </svg>
         </button>
       </div>
@@ -607,16 +624,38 @@
       </div>
     </div>
 
-    <!-- 富文本编辑模式 -->
-    <editor-content
-      v-if="!isSourceMode"
-      :editor="editor"
-      class="editor-content"
-      :class="{ 'ctrl-pressed': isCtrlPressed }"
-      @mousedown.capture="handleEditorClick"
-      @paste="handleEditorPaste"
-      @contextmenu="handleContextMenu"
-    />
+    <!-- 富文本编辑模式 + 密文遮罩浮动眼睛按钮（同属非源码模式，避免破坏 v-else 链） -->
+    <template v-if="!isSourceMode">
+      <editor-content
+        :editor="editor"
+        class="editor-content"
+        :class="{ 'ctrl-pressed': isCtrlPressed }"
+        @mousedown.capture="handleEditorClick"
+        @paste="handleEditorPaste"
+        @contextmenu="handleContextMenu"
+      />
+
+      <!-- 密文遮罩浮动眼睛按钮（显示/隐藏当前光标所在密文段） -->
+      <button
+        v-if="eye.visible"
+        class="secret-eye"
+        :style="{ left: eye.x + 'px', top: eye.y + 'px' }"
+        :title="eye.revealed ? '隐藏密文' : '显示密文'"
+        @mousedown.prevent
+        @click="toggleReveal"
+      >
+        <svg v-if="!eye.revealed" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+        <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+          <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+          <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+          <line x1="1" y1="1" x2="23" y2="23"/>
+        </svg>
+      </button>
+    </template>
 
     <!-- 源码编辑模式 -->
     <div v-else class="source-editor">
@@ -639,7 +678,7 @@
 <script setup lang="ts">
 import { ref, watch, onBeforeUnmount, onMounted, computed } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
-import { Extension } from '@tiptap/core'
+import { Extension, getMarkRange } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import StarterKit from '@tiptap/starter-kit'
@@ -661,6 +700,7 @@ import ConfirmDialog from './ConfirmDialog.vue'
 import SearchReplaceDialog from './SearchReplaceDialog.vue'
 import ContextMenu from './ContextMenu.vue'
 import { getAvailableFonts } from '../utils/fontDetector'
+import { SecretText, secretPluginKey, type SecretRange } from '../extensions/SecretText'
 
 // 扩展 TableCell 以支持背景色属性
 const TableCellWithBg = TableCell.extend({
@@ -750,6 +790,17 @@ const copiedFormat = ref<Partial<{
   color: string
   highlight: string
 }> | null>(null)
+
+// 密文遮罩相关
+const rootRef = ref<HTMLElement | null>(null)
+const eye = ref<{
+  visible: boolean
+  x: number
+  y: number
+  revealed: boolean
+  range: SecretRange | null
+}>({ visible: false, x: 0, y: 0, revealed: false, range: null })
+let eyeRaf = 0
 
 // 字体选项 - 动态加载已安装的字体
 const fontOptions = ref<Array<{ label: string; value: string }>>([])
@@ -1098,6 +1149,7 @@ const editor = useEditor({
     TaskItem.configure({
       nested: true
     }),
+    SecretText,
     SearchHighlight
   ],
   content: props.content || '',
@@ -1112,6 +1164,14 @@ const editor = useEditor({
     debounceTimer = setTimeout(() => {
       emit('update', editor.getHTML())
     }, 500)
+  },
+  onTransaction: () => {
+    scheduleEye()
+  },
+  onBlur: () => {
+    // 失焦时清除临时揭示，避免被旁观
+    editor.value?.commands.hideSecret()
+    if (eye.value.visible) eye.value = { ...eye.value, visible: false, range: null }
   }
 })
 
@@ -1398,7 +1458,10 @@ watch(() => props.content, (newContent) => {
   if (editor.value && newContent !== undefined) {
     const currentContent = editor.value.getHTML()
     if (currentContent !== newContent) {
-      editor.value.commands.setContent(newContent || '', false)
+      // 切换笔记/外部重设内容时清掉密文揭示与浮动按钮
+      clearSecretUI()
+      // v3 第二参是 options 对象，传 false 不等于 emitUpdate:false，会回灌 update
+      editor.value.commands.setContent(newContent || '', { emitUpdate: false })
     }
     // 同步源码模式
     if (isSourceMode.value) {
@@ -1407,11 +1470,17 @@ watch(() => props.content, (newContent) => {
   }
 })
 
+watch(() => props.noteId, () => {
+  clearSecretUI()
+})
+
 function toggleSourceMode() {
   if (isSourceMode.value) {
     applySourceCode()
     isSourceMode.value = false
   } else {
+    // 源码模式会暴露原文，先清掉揭示与按钮
+    clearSecretUI()
     sourceCode.value = editor.value?.getHTML() || ''
     isSourceMode.value = true
   }
@@ -1552,8 +1621,112 @@ function cancelFormatBrush() {
   copiedFormat.value = null
 }
 
+// 密文遮罩：取光标/选区所在密文段范围
+function currentSecretRange(): SecretRange | null {
+  const ed = editor.value
+  if (!ed) return null
+  const type = ed.schema.marks.secret
+  if (!type) return null
+  const r = getMarkRange(ed.state.selection.$from, type)
+  return r ? { from: r.from, to: r.to } : null
+}
+
+// 工具栏图标与高亮：随光标位置切换
+const cursorInSecret = computed(() => {
+  const ed = editor.value
+  if (!ed) return false
+  return ed.isActive('secret') || !!currentSecretRange()
+})
+
+// 重新计算眼睛按钮的位置与状态
+function updateEye() {
+  const ed = editor.value
+  const root = rootRef.value
+  if (!ed || !root || isSourceMode.value) {
+    if (eye.value.visible) eye.value = { ...eye.value, visible: false, range: null }
+    return
+  }
+  const range = currentSecretRange()
+  if (!range) {
+    if (eye.value.visible) eye.value = { ...eye.value, visible: false, range: null }
+    return
+  }
+  try {
+    const coords = ed.view.coordsAtPos(range.from)
+    const rootRect = root.getBoundingClientRect()
+    // 超出 .editor-content 视口则隐藏
+    const sc = root.querySelector('.editor-content') as HTMLElement | null
+    if (sc) {
+      const sr = sc.getBoundingClientRect()
+      if (coords.top < sr.top - 4 || coords.bottom > sr.bottom + 4) {
+        if (eye.value.visible) eye.value = { ...eye.value, visible: false, range: null }
+        return
+      }
+    }
+    const st = secretPluginKey.getState(ed.state)
+    const revealed = !!st?.revealed && st.revealed.from <= range.from && st.revealed.to >= range.to
+    eye.value = {
+      visible: true,
+      x: Math.max(0, coords.left - rootRect.left),
+      y: coords.top - rootRect.top - 26,
+      revealed,
+      range,
+    }
+  } catch {
+    // coordsAtPos 在文档刚初始化时偶尔抛错，吞掉即可
+  }
+}
+
+function scheduleEye() {
+  if (eyeRaf) cancelAnimationFrame(eyeRaf)
+  eyeRaf = requestAnimationFrame(updateEye)
+}
+
+// 工具栏密文按钮：光标在密文段内 → 整段取消；否则 → 切换设置
+function toggleSecretMark() {
+  const ed = editor.value
+  if (!ed) return
+  if (ed.isActive('secret') || currentSecretRange()) {
+    // 整段取消：先扩展选区到整段 secret mark
+    ed.chain().focus().extendMarkRange('secret').unsetMark('secret').run()
+  } else {
+    ed.chain().focus().toggleMark('secret').run()
+  }
+}
+
+// 浮动眼睛按钮：切换当前段临时显示
+function toggleReveal() {
+  const ed = editor.value
+  const r = eye.value.range
+  if (!ed || !r) return
+  if (eye.value.revealed) {
+    ed.commands.hideSecret()
+  } else {
+    ed.commands.revealSecret(r)
+  }
+}
+
+function clearSecretUI() {
+  if (eyeRaf) {
+    cancelAnimationFrame(eyeRaf)
+    eyeRaf = 0
+  }
+  editor.value?.commands.hideSecret()
+  if (eye.value.visible) eye.value = { visible: false, x: 0, y: 0, revealed: false, range: null }
+}
+
+onMounted(() => {
+  const sc = rootRef.value?.querySelector('.editor-content')
+  if (sc) sc.addEventListener('scroll', scheduleEye, { passive: true })
+  window.addEventListener('resize', scheduleEye)
+})
+
 onBeforeUnmount(() => {
   if (debounceTimer) clearTimeout(debounceTimer)
+  if (eyeRaf) cancelAnimationFrame(eyeRaf)
+  const sc = rootRef.value?.querySelector('.editor-content')
+  if (sc) sc.removeEventListener('scroll', scheduleEye)
+  window.removeEventListener('resize', scheduleEye)
   editor.value?.destroy()
   document.removeEventListener('click', handleGlobalClick)
   document.removeEventListener('keydown', handleKeyDown)
@@ -2219,5 +2392,66 @@ onBeforeUnmount(() => {
 
 :root[data-theme='dark'] .editor-content :deep(.ProseMirror .search-match-current) {
   background-color: rgba(255, 165, 0, 0.4);
+}
+
+/* 密文遮罩：浮动按钮的定位上下文 */
+.richtext-editor {
+  position: relative;
+}
+
+/* 关键：color:transparent 会让 caret-color:auto 解析为透明，必须显式声明 */
+.editor-content :deep(.ProseMirror) {
+  caret-color: var(--text-primary);
+}
+
+.editor-content :deep(.ProseMirror .secret-text) {
+  background: rgba(128, 128, 128, 0.14);
+  border-radius: 2px;
+}
+
+.editor-content :deep(.ProseMirror .secret-ch) {
+  position: relative;
+  color: transparent;
+  text-decoration-color: transparent;
+}
+
+.editor-content :deep(.ProseMirror .secret-ch)::after {
+  content: attr(data-mask);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  white-space: pre;
+  color: var(--text-primary);
+  pointer-events: none;
+  user-select: none;
+}
+
+.editor-content :deep(.ProseMirror .secret-ch)::selection {
+  background: var(--selection-bg, #b3d4fc);
+}
+
+.secret-eye {
+  position: absolute;
+  z-index: 20;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.secret-eye:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.06));
 }
 </style>
