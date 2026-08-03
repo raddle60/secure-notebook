@@ -51,13 +51,20 @@
           :class="{ active: isFormatBrushActive }"
           title="格式刷"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M8 2h8v8H6l2-8z"/>
-            <path d="M5 14l-3 6"/>
-            <path d="M9 14l-3 6"/>
-            <path d="M13 14l-3 6"/>
-            <path d="M17 14l-3 6"/>
-            <path d="M21 14l-3 6"/>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <g transform="rotate(-45 12 12)">
+              <!-- 柄：长矩形 -->
+              <rect x="13" y="10.5" width="11" height="3" rx="0.8"/>
+              <!-- 金属箍：一根斜线（从左上到右下），比刷毛略长 -->
+              <line x1="14" y1="4" x2="13" y2="20" stroke-width="3"/>
+              <!-- 刷毛：4 条短平行线（明显比柄短） -->
+              <line x1="13" y1="7" x2="4" y2="7"/>              
+              <line x1="13" y1="9" x2="4" y2="9"/>
+              <line x1="13" y1="11" x2="4" y2="11"/>
+              <line x1="13" y1="13" x2="4" y2="13"/>
+              <line x1="13" y1="15" x2="4" y2="15"/>
+              <line x1="13" y1="17" x2="4" y2="17"/>
+            </g>
           </svg>
         </button>
       </div>
