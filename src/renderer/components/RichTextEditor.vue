@@ -1153,6 +1153,10 @@ const editor = useEditor({
     SearchHighlight
   ],
   content: props.content || '',
+  // 全局开启 preserveWhitespace: 'full'：
+  // 编辑器初次构造时 createDoc() 会用 parseOptions 解析初始 content，
+  // 默认 {} 会走 DOM 解析路径，丢失段落前导空格。
+  parseOptions: { preserveWhitespace: 'full' },
   editorProps: {
     attributes: {
       class: 'rich-text-editor',
@@ -1461,7 +1465,9 @@ watch(() => props.content, (newContent) => {
       // 切换笔记/外部重设内容时清掉密文揭示与浮动按钮
       clearSecretUI()
       // v3 第二参是 options 对象，传 false 不等于 emitUpdate:false，会回灌 update
-      editor.value.commands.setContent(newContent || '', { emitUpdate: false })
+      // parseOptions.preserveWhitespace === 'full' 时走 insertContentAt，保留行首空格；
+      // 默认走 DOM 解析会把 <p>  hello</p> 折叠为 <p> hello</p>，丢失前导空格
+      editor.value.commands.setContent(newContent || '', { emitUpdate: false, parseOptions: { preserveWhitespace: 'full' } })
     }
     // 同步源码模式
     if (isSourceMode.value) {
@@ -1488,7 +1494,12 @@ function toggleSourceMode() {
 
 function applySourceCode() {
   if (editor.value) {
-    editor.value.commands.setContent(sourceCode.value || '', false)
+    // 必须传 preserveWhitespace: 'full'，否则 TipTap 默认走 DOM 解析路径，
+    // 会把段落行首的多余空格按 HTML 规范折叠为单个空格
+    editor.value.commands.setContent(sourceCode.value || '', {
+      emitUpdate: false,
+      parseOptions: { preserveWhitespace: 'full' },
+    })
     emit('update', sourceCode.value || '')
   }
 }
