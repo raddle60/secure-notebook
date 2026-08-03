@@ -27,6 +27,14 @@
       confirm-text="下载"
       @confirm="confirmDownload"
     />
+    <!-- 更新编号确认对话框 -->
+    <ConfirmDialog
+      v-model="showUpdateNumberingDialog"
+      title="更新标题编号"
+      message="将按文档顺序为 #/##/### 标题添加或更新编号（格式：x.、x.x、x.x.x）。原有编号将被替换，代码块内的 # 行不会受影响，是否继续？"
+      confirm-text="更新"
+      @confirm="updateHeadingsNumbering"
+    />
     <!-- 右键菜单 -->
     <ContextMenu
       v-model="showContextMenu"
@@ -97,6 +105,25 @@
         </button>
       </div>
       <div class="toolbar-divider"></div>
+      <div class="toolbar-group">
+        <button
+          class="toolbar-btn"
+          @click="requestUpdateNumbering"
+          title="更新标题编号（#: x.、##: x.x、###: x.x.x）"
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 5h2"/>
+            <path d="M5 3v4"/>
+            <path d="M3 9h4"/>
+            <path d="M3 13h2"/>
+            <path d="M5 11v4"/>
+            <path d="M3 17h4"/>
+            <line x1="10" y1="6" x2="21" y2="6"/>
+            <line x1="10" y1="12" x2="21" y2="12"/>
+            <line x1="10" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+      </div>
       <div class="toolbar-spacer"></div>
       <button
         class="toolbar-btn"
@@ -186,6 +213,7 @@ const showLinkDialog = ref(false)
 const showUrlDialog = ref(false)
 const showImageDialog = ref(false)
 const showConfirmDialog = ref(false)
+const showUpdateNumberingDialog = ref(false)
 const downloadFilename = ref('')
 const pendingDownloadId = ref<string | null>(null)
 
@@ -397,6 +425,97 @@ function updateCodeMirror(content: string) {
     })
     cmContent = content
   }
+}
+
+// 匹配标题开头编号的正则（最多 3 级，每级 1-3 位数字）
+const MD_HEADING_PREFIX_RE = /^\s*\d{1,3}(?:\.\d{1,3}){0,2}\.?\s+/
+// 匹配 ATX 标题行（#、##、###）
+const MD_HEADING_RE = /^(\s*)(#{1,3})\s+(.*)$/
+
+// 点击工具栏按钮：弹出确认框
+function requestUpdateNumbering() {
+  if (!cmView) return
+  showUpdateNumberingDialog.value = true
+}
+
+// 确认后执行编号更新
+function updateHeadingsNumbering() {
+  if (!cmView) return
+
+  const doc = cmView.state.doc
+  const counters = [0, 0, 0] // [h1, h2, h3]
+  const updates: Array<{ from: number; to: number; insert: string }> = []
+  let inCodeBlock = false
+
+  for (let i = 1; i <= doc.lines; i++) {
+    const line = doc.line(i)
+    const text = line.text
+
+    // 跟踪围栏代码块（``` 或 ~~~）
+    const trimmed = text.trimStart()
+    if (trimmed.startsWith('```') || trimmed.startsWith('~~~')) {
+      inCodeBlock = !inCodeBlock
+      continue
+    }
+
+    // 跳过代码块内的内容
+    if (inCodeBlock) continue
+
+    // 匹配 ATX 标题（#、##、###）
+    const m = text.match(MD_HEADING_RE)
+    if (!m) continue
+
+    const indent = m[1]
+    const hashes = m[2]
+    const content = m[3]
+    const level = hashes.length
+
+    // 更新计数器
+    if (level === 1) {
+      counters[0]++
+      counters[1] = 0
+      counters[2] = 0
+    } else if (level === 2) {
+      if (counters[0] === 0) counters[0] = 1
+      counters[1]++
+      counters[2] = 0
+    } else {
+      // level === 3
+      if (counters[0] === 0) counters[0] = 1
+      if (counters[1] === 0) counters[1] = 1
+      counters[2]++
+    }
+
+    // 计算新编号前缀
+    let prefix = ''
+    if (level === 1) prefix = `${counters[0]}. `
+    else if (level === 2) prefix = `${counters[0]}.${counters[1]} `
+    else prefix = `${counters[0]}.${counters[1]}.${counters[2]} `
+
+    // 找到标题内容起点（缩进 + # + 一个空格）
+    const hashEnd = line.from + indent.length + hashes.length + 1
+
+    // 检测并去除原有编号
+    const contentMatch = content.match(MD_HEADING_PREFIX_RE)
+    const prefixEnd = contentMatch ? contentMatch[0].length : 0
+
+    updates.push({
+      from: hashEnd,
+      to: hashEnd + prefixEnd,
+      insert: prefix,
+    })
+  }
+
+  if (updates.length === 0) return
+
+  // 从后往前替换，避免位置偏移
+  cmView.dispatch({
+    changes: updates.slice().reverse().map(u => ({
+      from: u.from,
+      to: u.to,
+      insert: u.insert,
+    })),
+  })
 }
 
 // 大小写转换函数
