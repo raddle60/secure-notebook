@@ -30,6 +30,14 @@
       confirm-text="下载"
       @confirm="confirmDownload"
     />
+    <!-- 更新编号确认对话框 -->
+    <ConfirmDialog
+      v-model="showUpdateNumberingDialog"
+      title="更新标题编号"
+      message="将按文档顺序为 h1/h2/h3 标题添加或更新编号（格式：x.、x.x、x.x.x）。原有编号将被替换，是否继续？"
+      confirm-text="更新"
+      @confirm="updateHeadingsNumbering"
+    />
     <!-- 搜索替换对话框 -->
     <SearchReplaceDialog
       v-model="showSearchDialog"
@@ -281,6 +289,27 @@
           title="标题3"
         >
           H3
+        </button>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
+      <div class="toolbar-group">
+        <button
+          @click="requestUpdateNumbering"
+          title="更新标题编号（h1: x.、h2: x.x、h3: x.x.x）"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 5h2"/>
+            <path d="M5 3v4"/>
+            <path d="M3 9h4"/>
+            <path d="M3 13h2"/>
+            <path d="M5 11v4"/>
+            <path d="M3 17h4"/>
+            <line x1="10" y1="6" x2="21" y2="6"/>
+            <line x1="10" y1="12" x2="21" y2="12"/>
+            <line x1="10" y1="18" x2="21" y2="18"/>
+          </svg>
         </button>
       </div>
 
@@ -761,6 +790,7 @@ const showUrlDialog = ref(false)
 const showImageDialog = ref(false)
 const showConfirmDialog = ref(false)
 const showSearchDialog = ref(false)
+const showUpdateNumberingDialog = ref(false)
 const showContextMenu = ref(false)
 const contextMenuPosition = ref({ x: 0, y: 0 })
 const selectedText = ref('')
@@ -1637,6 +1667,75 @@ function applyFormat() {
 function cancelFormatBrush() {
   isFormatBrushActive.value = false
   copiedFormat.value = null
+}
+
+// 匹配标题开头的编号，例如 "1.", "1.1", "1.1.1", "1.1.1."（最多 3 级，每级 1-3 位数字）
+const HEADING_PREFIX_RE = /^\s*\d{1,3}(?:\.\d{1,3}){0,2}\.?\s+/
+
+// 点击工具栏按钮：弹出确认框
+function requestUpdateNumbering() {
+  if (!editor.value) return
+  showUpdateNumberingDialog.value = true
+}
+
+// 确认后执行编号更新
+function updateHeadingsNumbering() {
+  const ed = editor.value
+  if (!ed) return
+
+  const counters = [0, 0, 0] // [h1, h2, h3]
+  const updates: Array<{ from: number; to: number; text: string }> = []
+
+  ed.state.doc.descendants((node, pos) => {
+    if (node.type.name !== 'heading') return
+    const level = node.attrs.level as number
+    if (level < 1 || level > 3) return
+
+    // 更新计数
+    if (level === 1) {
+      counters[0]++
+      counters[1] = 0
+      counters[2] = 0
+    } else if (level === 2) {
+      if (counters[0] === 0) counters[0] = 1
+      counters[1]++
+      counters[2] = 0
+    } else {
+      // level === 3
+      if (counters[0] === 0) counters[0] = 1
+      if (counters[1] === 0) counters[1] = 1
+      counters[2]++
+    }
+
+    // 计算新编号
+    let prefix = ''
+    if (level === 1) prefix = `${counters[0]}. `
+    else if (level === 2) prefix = `${counters[0]}.${counters[1]} `
+    else prefix = `${counters[0]}.${counters[1]}.${counters[2]} `
+
+    // 找到标题内容起点（跳过 opening tag）
+    const contentStart = pos + 1
+    const currentText = node.textContent
+    const match = currentText.match(HEADING_PREFIX_RE)
+    const prefixEnd = match ? match[0].length : 0
+
+    updates.push({
+      from: contentStart,
+      to: contentStart + prefixEnd,
+      text: prefix,
+    })
+  })
+
+  if (updates.length === 0) return
+
+  // 从后往前替换，避免位置偏移
+  const tr = ed.state.tr
+  for (let i = updates.length - 1; i >= 0; i--) {
+    const u = updates[i]
+    tr.insertText(u.text, u.from, u.to)
+  }
+
+  ed.view.dispatch(tr)
 }
 
 // 密文遮罩：取光标/选区所在密文段范围
