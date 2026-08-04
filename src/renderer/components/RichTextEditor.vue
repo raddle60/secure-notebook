@@ -34,7 +34,7 @@
     <ConfirmDialog
       v-model="showUpdateNumberingDialog"
       title="更新标题编号"
-      message="将按文档顺序为 h1/h2/h3 标题添加或更新编号（格式：x.、x.x、x.x.x）。原有编号将被替换，是否继续？"
+      message="将按文档顺序重写所有标题编号，原有编号将被替换。是否继续？"
       confirm-text="更新"
       @confirm="updateHeadingsNumbering"
     />
@@ -290,6 +290,20 @@
         >
           H3
         </button>
+        <button
+          @click="editor.chain().focus().toggleHeading({ level: 4 }).run()"
+          :class="{ active: editor.isActive('heading', { level: 4 }) }"
+          title="标题4"
+        >
+          H4
+        </button>
+        <button
+          @click="editor.chain().focus().toggleHeading({ level: 5 }).run()"
+          :class="{ active: editor.isActive('heading', { level: 5 }) }"
+          title="标题5"
+        >
+          H5
+        </button>
       </div>
 
       <div class="toolbar-divider"></div>
@@ -297,7 +311,7 @@
       <div class="toolbar-group">
         <button
           @click="requestUpdateNumbering"
-          title="更新标题编号（h1: x.、h2: x.x、h3: x.x.x）"
+          title="更新标题编号（h1: x.、h2: x.x、h3: x.x.x、h4: x.x.x.x、h5: x.x.x.x.x）"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 5h2"/>
@@ -1669,8 +1683,8 @@ function cancelFormatBrush() {
   copiedFormat.value = null
 }
 
-// 匹配标题开头的编号，例如 "1.", "1.1", "1.1.1", "1.1.1."（最多 3 级，每级 1-3 位数字）
-const HEADING_PREFIX_RE = /^\s*\d{1,3}(?:\.\d{1,3}){0,2}\.?\s+/
+// 匹配标题开头的编号，例如 "1.", "1.1.1", "1.1.1.1.1"（最多 5 级，每级 1-3 位数字）
+const HEADING_PREFIX_RE = /^\s*\d{1,3}(?:\.\d{1,3}){0,4}\.?\s+/
 
 // 点击工具栏按钮：弹出确认框
 function requestUpdateNumbering() {
@@ -1683,35 +1697,27 @@ function updateHeadingsNumbering() {
   const ed = editor.value
   if (!ed) return
 
-  const counters = [0, 0, 0] // [h1, h2, h3]
+  const counters = [0, 0, 0, 0, 0] // [h1..h5]
   const updates: Array<{ from: number; to: number; text: string }> = []
 
   ed.state.doc.descendants((node, pos) => {
     if (node.type.name !== 'heading') return
     const level = node.attrs.level as number
-    if (level < 1 || level > 3) return
+    if (level < 1 || level > 5) return
 
-    // 更新计数
-    if (level === 1) {
-      counters[0]++
-      counters[1] = 0
-      counters[2] = 0
-    } else if (level === 2) {
-      if (counters[0] === 0) counters[0] = 1
-      counters[1]++
-      counters[2] = 0
-    } else {
-      // level === 3
-      if (counters[0] === 0) counters[0] = 1
-      if (counters[1] === 0) counters[1] = 1
-      counters[2]++
+    // 当前层级计数 +1，更深层级全部归零
+    counters[level - 1]++
+    for (let i = level; i < 5; i++) {
+      counters[i] = 0
+    }
+    // 浅层级若无值，从 1 开始（避免出现 0.1 这种情况）
+    for (let i = 0; i < level - 1; i++) {
+      if (counters[i] === 0) counters[i] = 1
     }
 
-    // 计算新编号
-    let prefix = ''
-    if (level === 1) prefix = `${counters[0]}. `
-    else if (level === 2) prefix = `${counters[0]}.${counters[1]} `
-    else prefix = `${counters[0]}.${counters[1]}.${counters[2]} `
+    // 计算新编号：h1=x.、h2=x.x、h3=x.x.x、h4=x.x.x.x、h5=x.x.x.x.x
+    const parts = counters.slice(0, level).join('.')
+    const prefix = `${parts} `
 
     // 找到标题内容起点（跳过 opening tag）
     const contentStart = pos + 1
@@ -1942,7 +1948,9 @@ onBeforeUnmount(() => {
 
 :root[data-theme='dark'] .editor-content :deep(.ProseMirror h1),
 :root[data-theme='dark'] .editor-content :deep(.ProseMirror h2),
-:root[data-theme='dark'] .editor-content :deep(.ProseMirror h3) {
+:root[data-theme='dark'] .editor-content :deep(.ProseMirror h3),
+:root[data-theme='dark'] .editor-content :deep(.ProseMirror h4),
+:root[data-theme='dark'] .editor-content :deep(.ProseMirror h5) {
   color: var(--text-primary);
 }
 
@@ -1978,7 +1986,9 @@ onBeforeUnmount(() => {
 
 .editor-content :deep(.ProseMirror h1),
 .editor-content :deep(.ProseMirror h2),
-.editor-content :deep(.ProseMirror h3) {
+.editor-content :deep(.ProseMirror h3),
+.editor-content :deep(.ProseMirror h4),
+.editor-content :deep(.ProseMirror h5) {
   margin: 1.2em 0 0.6em 0;
   font-weight: 600;
   line-height: 1.3;
@@ -1996,6 +2006,14 @@ onBeforeUnmount(() => {
 
 .editor-content :deep(.ProseMirror h3) {
   font-size: 1.25em;
+}
+
+.editor-content :deep(.ProseMirror h4) {
+  font-size: 1.1em;
+}
+
+.editor-content :deep(.ProseMirror h5) {
+  font-size: 1em;
 }
 
 .editor-content :deep(.ProseMirror ul),

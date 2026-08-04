@@ -31,7 +31,7 @@
     <ConfirmDialog
       v-model="showUpdateNumberingDialog"
       title="更新标题编号"
-      message="将按文档顺序为 #/##/### 标题添加或更新编号（格式：x.、x.x、x.x.x）。原有编号将被替换，代码块内的 # 行不会受影响，是否继续？"
+      message="将按文档顺序重写所有标题编号，原有编号将被替换（代码块内的 # 行不受影响）。是否继续？"
       confirm-text="更新"
       @confirm="updateHeadingsNumbering"
     />
@@ -109,7 +109,7 @@
         <button
           class="toolbar-btn"
           @click="requestUpdateNumbering"
-          title="更新标题编号（#: x.、##: x.x、###: x.x.x）"
+          title="更新标题编号（#: x.、##: x.x、###: x.x.x、####: x.x.x.x、#####: x.x.x.x.x）"
         >
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 5h2"/>
@@ -427,10 +427,10 @@ function updateCodeMirror(content: string) {
   }
 }
 
-// 匹配标题开头编号的正则（最多 3 级，每级 1-3 位数字）
-const MD_HEADING_PREFIX_RE = /^\s*\d{1,3}(?:\.\d{1,3}){0,2}\.?\s+/
-// 匹配 ATX 标题行（#、##、###）
-const MD_HEADING_RE = /^(\s*)(#{1,3})\s+(.*)$/
+// 匹配标题开头编号的正则（最多 5 级，每级 1-3 位数字）
+const MD_HEADING_PREFIX_RE = /^\s*\d{1,3}(?:\.\d{1,3}){0,4}\.?\s+/
+// 匹配 ATX 标题行（# 到 #####）
+const MD_HEADING_RE = /^(\s*)(#{1,5})\s+(.*)$/
 
 // 点击工具栏按钮：弹出确认框
 function requestUpdateNumbering() {
@@ -443,7 +443,7 @@ function updateHeadingsNumbering() {
   if (!cmView) return
 
   const doc = cmView.state.doc
-  const counters = [0, 0, 0] // [h1, h2, h3]
+  const counters = [0, 0, 0, 0, 0] // [h1..h5]
   const updates: Array<{ from: number; to: number; insert: string }> = []
   let inCodeBlock = false
 
@@ -461,7 +461,7 @@ function updateHeadingsNumbering() {
     // 跳过代码块内的内容
     if (inCodeBlock) continue
 
-    // 匹配 ATX 标题（#、##、###）
+    // 匹配 ATX 标题（# 到 #####）
     const m = text.match(MD_HEADING_RE)
     if (!m) continue
 
@@ -470,27 +470,19 @@ function updateHeadingsNumbering() {
     const content = m[3]
     const level = hashes.length
 
-    // 更新计数器
-    if (level === 1) {
-      counters[0]++
-      counters[1] = 0
-      counters[2] = 0
-    } else if (level === 2) {
-      if (counters[0] === 0) counters[0] = 1
-      counters[1]++
-      counters[2] = 0
-    } else {
-      // level === 3
-      if (counters[0] === 0) counters[0] = 1
-      if (counters[1] === 0) counters[1] = 1
-      counters[2]++
+    // 当前层级计数 +1，更深层级全部归零
+    counters[level - 1]++
+    for (let i2 = level; i2 < 5; i2++) {
+      counters[i2] = 0
+    }
+    // 浅层级若无值，从 1 开始（避免出现 0.1 这种情况）
+    for (let i2 = 0; i2 < level - 1; i2++) {
+      if (counters[i2] === 0) counters[i2] = 1
     }
 
-    // 计算新编号前缀
-    let prefix = ''
-    if (level === 1) prefix = `${counters[0]}. `
-    else if (level === 2) prefix = `${counters[0]}.${counters[1]} `
-    else prefix = `${counters[0]}.${counters[1]}.${counters[2]} `
+    // 计算新编号：#=x.、##=x.x、###=x.x.x、####=x.x.x.x、#####=x.x.x.x.x
+    const parts = counters.slice(0, level).join('.')
+    const prefix = `${parts} `
 
     // 找到标题内容起点（缩进 + # + 一个空格）
     const hashEnd = line.from + indent.length + hashes.length + 1
