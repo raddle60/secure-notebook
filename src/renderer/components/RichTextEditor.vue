@@ -367,6 +367,40 @@
 
       <div class="toolbar-divider"></div>
 
+      <!-- 行距：减少 / 增加 -->
+      <div class="toolbar-group">
+        <button
+          @click="decreaseLineHeight"
+          title="减少行距"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <!-- 左侧：三条横线代表段落 -->
+            <line x1="3" y1="6" x2="11" y2="6"/>
+            <line x1="3" y1="12" x2="11" y2="12"/>
+            <line x1="3" y1="18" x2="11" y2="18"/>
+            <!-- 右侧：向内箭头（压缩）-->
+            <path d="M15 7l3 3 3 -3"/>
+            <path d="M15 17l3 -3 3 3"/>
+          </svg>
+        </button>
+        <button
+          @click="increaseLineHeight"
+          title="增加行距"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <!-- 左侧：三条横线代表段落 -->
+            <line x1="3" y1="6" x2="11" y2="6"/>
+            <line x1="3" y1="12" x2="11" y2="12"/>
+            <line x1="3" y1="18" x2="11" y2="18"/>
+            <!-- 右侧：向外箭头（扩张）-->
+            <path d="M15 9l3 -3 3 3"/>
+            <path d="M15 15l3 3 3 -3"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="toolbar-divider"></div>
+
       <div class="toolbar-group">
         <button
           @click="editor.chain().focus().toggleBulletList().run()"
@@ -796,6 +830,88 @@ const TableHeaderWithBg = TableHeader.extend({
   },
 })
 
+// 行高扩展：给 paragraph / heading 加行高属性，支持跨多段选区
+const LINE_HEIGHT_LEVELS = [1.0, 1.2, 1.4, 1.5, 1.7, 2.0, 2.5, 3.0]
+const LINE_HEIGHT_NODE_TYPES = ['paragraph', 'heading']
+
+const LineHeight = Extension.create({
+  name: 'lineHeight',
+  addOptions() {
+    return { types: LINE_HEIGHT_NODE_TYPES }
+  },
+  addGlobalAttributes() {
+    return [{
+      types: this.options.types,
+      attributes: {
+        lineHeight: {
+          default: null,
+          parseHTML: (el: HTMLElement) => el.style.lineHeight || null,
+          renderHTML: (attrs: { lineHeight: string | null }) => {
+            if (!attrs.lineHeight) return {}
+            // 同时清除 min-height，避免全局 CSS 的 min-height: 1.5em 限制自定义行距
+            return { style: `line-height: ${attrs.lineHeight}; min-height: 0` }
+          },
+        },
+      },
+    }]
+  },
+  addCommands() {
+    return {
+      increaseLineHeight: () => ({ tr, dispatch, state }) => {
+        const { from, to } = state.selection
+        let updated = false
+        state.doc.nodesBetween(from, to, (node, pos) => {
+          if (LINE_HEIGHT_NODE_TYPES.includes(node.type.name)) {
+            const current = node.attrs.lineHeight
+            const currentNum = current ? parseFloat(String(current)) : 1.7
+            const idx = LINE_HEIGHT_LEVELS.findIndex(l => l > currentNum + 0.001)
+            if (idx !== -1) {
+              tr.setNodeMarkup(pos, undefined, { ...node.attrs, lineHeight: String(LINE_HEIGHT_LEVELS[idx]) })
+              updated = true
+            }
+          }
+        })
+        if (updated && dispatch) dispatch(tr)
+        return updated
+      },
+      decreaseLineHeight: () => ({ tr, dispatch, state }) => {
+        const { from, to } = state.selection
+        let updated = false
+        state.doc.nodesBetween(from, to, (node, pos) => {
+          if (LINE_HEIGHT_NODE_TYPES.includes(node.type.name)) {
+            const current = node.attrs.lineHeight
+            const currentNum = current ? parseFloat(String(current)) : 1.7
+            // 找到第一个 >= 当前值的级别，减一档
+            const idx = LINE_HEIGHT_LEVELS.findIndex(l => l >= currentNum - 0.001)
+            if (idx > 0) {
+              tr.setNodeMarkup(pos, undefined, { ...node.attrs, lineHeight: String(LINE_HEIGHT_LEVELS[idx - 1]) })
+              updated = true
+            } else if (idx === 0 && currentNum > LINE_HEIGHT_LEVELS[0] + 0.001) {
+              // 当前值比最小级别还小一点，降到最小级别
+              tr.setNodeMarkup(pos, undefined, { ...node.attrs, lineHeight: String(LINE_HEIGHT_LEVELS[0]) })
+              updated = true
+            }
+          }
+        })
+        if (updated && dispatch) dispatch(tr)
+        return updated
+      },
+      unsetLineHeight: () => ({ tr, dispatch, state }) => {
+        const { from, to } = state.selection
+        let updated = false
+        state.doc.nodesBetween(from, to, (node, pos) => {
+          if (LINE_HEIGHT_NODE_TYPES.includes(node.type.name) && node.attrs.lineHeight) {
+            tr.setNodeMarkup(pos, undefined, { ...node.attrs, lineHeight: null })
+            updated = true
+          }
+        })
+        if (updated && dispatch) dispatch(tr)
+        return updated
+      },
+    }
+  },
+})
+
 const props = defineProps<{ content: string; noteId?: string | null }>()
 const emit = defineEmits<{ update: [content: string] }>()
 
@@ -840,6 +956,7 @@ const copiedFormat = ref<Partial<{
   fontSize: string
   color: string
   highlight: string
+  lineHeight: string
 }> | null>(null)
 
 // 密文遮罩相关
@@ -1080,6 +1197,16 @@ function setCellBgColor(color: string) {
   showCellBgColorMenu.value = false
 }
 
+function increaseLineHeight() {
+  if (!editor.value) return
+  editor.value.chain().focus().increaseLineHeight().run()
+}
+
+function decreaseLineHeight() {
+  if (!editor.value) return
+  editor.value.chain().focus().decreaseLineHeight().run()
+}
+
 // 计算属性 - 获取当前选中的字体标签
 const getFontFamilyLabel = computed(() => {
   if (!editor.value) return '默认字体'
@@ -1172,6 +1299,7 @@ const editor = useEditor({
     TextAlign.configure({
       types: ['heading', 'paragraph']
     }),
+    LineHeight,
     ResizeImage.configure({
       inline: true,
       allowBase64: true,
@@ -1629,6 +1757,7 @@ function copyFormat() {
   if (!editor.value) return
 
   // 获取当前选中的格式
+  const paragraphAttrs = editor.value.getAttributes('paragraph')
   copiedFormat.value = {
     bold: editor.value.isActive('bold'),
     italic: editor.value.isActive('italic'),
@@ -1639,6 +1768,7 @@ function copyFormat() {
     fontSize: editor.value.getAttributes('textStyle').fontSize || '',
     color: editor.value.getAttributes('textStyle').color || '',
     highlight: editor.value.getAttributes('highlight').color || '',
+    lineHeight: paragraphAttrs?.lineHeight || '',
   }
 
   isFormatBrushActive.value = true
@@ -1660,6 +1790,7 @@ function applyFormat() {
     .unsetFontSize()
     .unsetColor()
     .unsetHighlight()
+    .unsetLineHeight()
 
   // 应用复制的格式
   if (copiedFormat.value.bold) chain.setBold()
@@ -1673,6 +1804,23 @@ function applyFormat() {
   if (copiedFormat.value.highlight) chain.setHighlight({ color: copiedFormat.value.highlight })
 
   chain.run()
+
+  // 行高是块级属性，无法通过 chain 应用，需直接调用命令
+  if (copiedFormat.value.lineHeight) {
+    const ed = editor.value
+    if (ed) {
+      const { from, to } = ed.state.selection
+      const tr = ed.state.tr
+      let updated = false
+      ed.state.doc.nodesBetween(from, to, (node, pos) => {
+        if (['paragraph', 'heading'].includes(node.type.name)) {
+          tr.setNodeMarkup(pos, undefined, { ...node.attrs, lineHeight: copiedFormat.value!.lineHeight })
+          updated = true
+        }
+      })
+      if (updated) ed.view.dispatch(tr)
+    }
+  }
 
   // 应用一次后取消格式刷（如果需要多次应用，可以保持激活状态）
   cancelFormatBrush()
