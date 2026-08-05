@@ -227,6 +227,8 @@ const attachments = ref<any[]>([])
 
 // Ctrl 键状态
 const isCtrlPressed = ref(false)
+// 防止超链接重复打开：记录上次打开时间，5秒内不再响应
+const lastLinkOpenTime = ref(0)
 
 async function loadAttachments() {
   if (props.noteId) {
@@ -807,8 +809,10 @@ function interceptLinkClick(event: MouseEvent) {
     // 只在 mousedown 事件时处理链接逻辑，避免 click 重复处理
     if (event.type === 'mousedown') {
       if (href?.startsWith('http://attachment/')) {
-        // 附件链接：仅在 Ctrl+左键 时下载
+        // 附件链接：仅在 Ctrl+左键 时下载（5秒防重复）
         if (event.ctrlKey) {
+          if (Date.now() - lastLinkOpenTime.value < 5000) return
+          lastLinkOpenTime.value = Date.now()
           const attachmentId = href.replace('http://attachment/', '')
           const att = attachments.value.find(a => a.id === attachmentId)
           downloadFilename.value = att?.filename || '附件'
@@ -816,7 +820,9 @@ function interceptLinkClick(event: MouseEvent) {
           showConfirmDialog.value = true
         }
       } else if (event.ctrlKey && href) {
-        // Ctrl + 左键：在系统默认浏览器中打开
+        // Ctrl + 左键：在系统默认浏览器中打开（5秒防重复）
+        if (Date.now() - lastLinkOpenTime.value < 5000) return
+        lastLinkOpenTime.value = Date.now()
         window.vaultAPI.app.openExternal(href)
       }
       // 单击普通链接不处理（预览模式下只是选中文本）

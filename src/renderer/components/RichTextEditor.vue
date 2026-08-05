@@ -952,6 +952,8 @@ const editLinkHref = ref('')
 
 // 格式刷相关状态
 const isCtrlPressed = ref(false)
+// 防止超链接重复打开：记录上次打开时间，5秒内不再响应
+const lastLinkOpenTime = ref(0)
 const isFormatBrushActive = ref(false)
 const copiedFormat = ref<Partial<{
   bold: boolean
@@ -1686,10 +1688,12 @@ function handleEditorClick(event: MouseEvent) {
     const href = link.getAttribute('href')
 
     if (href?.startsWith('http://attachment/')) {
-      // 附件链接：仅在 Ctrl+左键 时下载
+      // 附件链接：仅在 Ctrl+左键 时下载（5秒防重复）
       if (event.ctrlKey) {
         event.preventDefault()
         event.stopPropagation()
+        if (Date.now() - lastLinkOpenTime.value < 5000) return
+        lastLinkOpenTime.value = Date.now()
         const attachmentId = href.replace('http://attachment/', '')
         const att = attachments.value.find(a => a.id === attachmentId)
         downloadFilename.value = att?.filename || '附件'
@@ -1698,10 +1702,12 @@ function handleEditorClick(event: MouseEvent) {
       }
       // 普通左键点击：不处理
     } else if (href) {
-      // 普通链接：仅在 Ctrl+ 左键 时在浏览器中打开
+      // 普通链接：仅在 Ctrl+ 左键 时在浏览器中打开（5秒防重复）
       if (event.ctrlKey) {
         event.preventDefault()
         event.stopPropagation()
+        if (Date.now() - lastLinkOpenTime.value < 5000) return
+        lastLinkOpenTime.value = Date.now()
         window.vaultAPI.app.openExternal(href)
       }
       // 否则只是选中链接，让编辑器默认处理
