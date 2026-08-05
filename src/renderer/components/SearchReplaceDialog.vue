@@ -1,100 +1,101 @@
 <template>
-  <BaseDialog
-    :model-value="modelValue"
-    @update:model-value="$emit('update:modelValue', $event)"
-    @close="close"
-  >
-    <div class="search-row">
-      <div class="search-input-wrapper">
-        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <input
-          v-model="searchText"
-          type="text"
-          class="search-input"
-          placeholder="查找..."
-          @keyup.enter="findNext"
-          ref="searchInput"
-        />
-        <div class="search-actions">
-          <button
-            class="icon-btn-sm"
-            :class="{ active: matchCase }"
-            title="区分大小写 (Alt+C)"
-            @click="matchCase = !matchCase"
-          >
-            Aa
-          </button>
-          <button
-            class="icon-btn-sm"
-            :class="{ active: matchWholeWord }"
-            title="全字匹配 (Alt+W)"
-            @click="matchWholeWord = !matchWholeWord"
-          >
-            Ab
-          </button>
-        </div>
-        <div class="match-count" v-if="searchText && totalMatches > 0">
-          {{ currentMatchIndex + 1 }} / {{ totalMatches }}
-        </div>
-        <div class="match-count no-match" v-else-if="searchText && totalMatches === 0">
-          无匹配
+  <Teleport to="body">
+    <div v-if="modelValue" class="search-panel" @mousedown.stop @click.stop>
+      <div class="search-panel-header">
+        <span class="search-panel-title">查找和替换</span>
+        <button class="search-panel-close" @click="close" title="关闭 (Esc)">×</button>
+      </div>
+      <div class="search-row">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            v-model="searchText"
+            type="text"
+            class="search-input"
+            placeholder="查找..."
+            @keyup.enter="findNext"
+            ref="searchInput"
+          />
+          <div class="search-actions">
+            <button
+              class="icon-btn-sm"
+              :class="{ active: matchCase }"
+              title="区分大小写 (Alt+C)"
+              @click="matchCase = !matchCase"
+            >
+              Aa
+            </button>
+            <button
+              class="icon-btn-sm"
+              :class="{ active: matchWholeWord }"
+              title="全字匹配 (Alt+W)"
+              @click="matchWholeWord = !matchWholeWord"
+            >
+              Ab
+            </button>
+          </div>
+          <div class="match-count" v-if="searchText && totalMatches > 0">
+            {{ currentMatchIndex + 1 }} / {{ totalMatches }}
+          </div>
+          <div class="match-count no-match" v-else-if="searchText && totalMatches === 0">
+            无匹配
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="search-row replace-row">
-      <div class="search-input-wrapper">
-        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="9 14 4 9 9 4"/>
-          <path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
-        </svg>
-        <input
-          v-model="replaceText"
-          type="text"
-          class="search-input"
-          placeholder="替换为..."
-        />
-      </div>
-      <div class="replace-actions">
-        <button class="icon-btn" @click="findPrevious" :disabled="totalMatches === 0" title="上一个 (Shift+Enter)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="15 18 9 12 15 6"/>
+      <div class="search-row replace-row">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 14 4 9 9 4"/>
+            <path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
           </svg>
-        </button>
-        <button class="icon-btn" @click="findNext" :disabled="totalMatches === 0" title="下一个 (Enter)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-        </button>
-        <button class="icon-btn" @click="replaceCurrent" :disabled="currentMatchIndex < 0" title="替换 (Alt+Enter)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="17 1 21 5 17 9"/>
-            <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-            <polyline points="7 23 3 19 7 15"/>
-            <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-          </svg>
-        </button>
-        <button class="icon-btn" @click="replaceAll" :disabled="totalMatches === 0" title="全部替换">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="17 1 21 5 17 9"/>
-            <path d="M3 7V5a4 4 0 0 1 4-4h14"/>
-            <polyline points="7 23 3 19 7 15"/>
-            <path d="M21 17v2a4 4 0 0 1-4 4H3"/>
-            <line x1="12" y1="3" x2="12" y2="21"/>
-          </svg>
-        </button>
+          <input
+            v-model="replaceText"
+            type="text"
+            class="search-input"
+            placeholder="替换为..."
+          />
+        </div>
+        <div class="replace-actions">
+          <button class="icon-btn" @click="findPrevious" :disabled="totalMatches === 0" title="上一个 (Shift+Enter)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          <button class="icon-btn" @click="findNext" :disabled="totalMatches === 0" title="下一个 (Enter)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </button>
+          <button class="icon-btn" @click="replaceCurrent" :disabled="currentMatchIndex < 0" title="替换 (Alt+Enter)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="17 1 21 5 17 9"/>
+              <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+              <polyline points="7 23 3 19 7 15"/>
+              <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+            </svg>
+          </button>
+          <button class="icon-btn" @click="replaceAll" :disabled="totalMatches === 0" title="全部替换">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="17 1 21 5 17 9"/>
+              <path d="M3 7V5a4 4 0 0 1 4-4h14"/>
+              <polyline points="7 23 3 19 7 15"/>
+              <path d="M21 17v2a4 4 0 0 1-4 4H3"/>
+              <line x1="12" y1="3" x2="12" y2="21"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
-  </BaseDialog>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
 import { Decoration } from '@tiptap/pm/view'
-import BaseDialog from './common/BaseDialog.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -143,11 +144,6 @@ function close() {
   clearHighlights()
 }
 
-function getEditorText(): string {
-  if (!props.editor) return ''
-  return props.editor.state.doc.textContent
-}
-
 function performSearch() {
   if (!props.editor || !searchText.value) {
     clearHighlights()
@@ -156,8 +152,7 @@ function performSearch() {
     return
   }
 
-  const text = getEditorText()
-  const matches = findAllMatches(text)
+  const matches = findAllMatchesInDoc()
   totalMatches.value = matches.length
 
   if (matches.length > 0 && currentMatchIndex.value >= matches.length) {
@@ -171,7 +166,9 @@ function performSearch() {
   }
 }
 
-function findAllMatches(text: string): { from: number; to: number }[] {
+function findAllMatchesInDoc(): { from: number; to: number }[] {
+  if (!props.editor) return []
+
   const matches: { from: number; to: number }[] = []
   const searchStr = searchText.value
   let regexStr = searchStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -183,10 +180,23 @@ function findAllMatches(text: string): { from: number; to: number }[] {
   const flags = matchCase.value ? 'g' : 'gi'
   const regex = new RegExp(regexStr, flags)
 
-  let match
-  while ((match = regex.exec(text)) !== null) {
-    matches.push({ from: match.index, to: match.index + match[0].length })
-  }
+  // 遍历文档的每个文本节点，在每个节点内搜索
+  // descendants 给的 pos 就是文本节点在文档中的起始位置
+  props.editor.state.doc.descendants((node, pos) => {
+    if (node.isText && node.text) {
+      const text = node.text
+      let match
+      regex.lastIndex = 0 // 重置正则状态
+      while ((match = regex.exec(text)) !== null) {
+        const from = pos + match.index
+        const to = from + match[0].length
+        matches.push({ from, to })
+      }
+    }
+  })
+
+  // 按位置排序（descendants 已经是顺序遍历，但保险起见排一下）
+  matches.sort((a, b) => a.from - b.from)
 
   return matches
 }
@@ -253,8 +263,7 @@ function scrollToMatch(match: { from: number; to: number }) {
 function findNext() {
   if (!props.editor || totalMatches.value === 0) return
 
-  const text = getEditorText()
-  const matches = findAllMatches(text)
+  const matches = findAllMatchesInDoc()
 
   if (matches.length === 0) return
 
@@ -266,8 +275,7 @@ function findNext() {
 function findPrevious() {
   if (!props.editor || totalMatches.value === 0) return
 
-  const text = getEditorText()
-  const matches = findAllMatches(text)
+  const matches = findAllMatchesInDoc()
 
   if (matches.length === 0) return
 
@@ -281,8 +289,7 @@ function findPrevious() {
 function replaceCurrent() {
   if (!props.editor || currentMatchIndex.value < 0) return
 
-  const text = getEditorText()
-  const matches = findAllMatches(text)
+  const matches = findAllMatchesInDoc()
 
   if (matches.length === 0 || currentMatchIndex.value >= matches.length) return
 
@@ -302,8 +309,7 @@ function replaceCurrent() {
 function replaceAll() {
   if (!props.editor || totalMatches.value === 0) return
 
-  const text = getEditorText()
-  const matches = findAllMatches(text).reverse()
+  const matches = findAllMatchesInDoc().reverse()
 
   for (const match of matches) {
     try {
@@ -320,6 +326,55 @@ function replaceAll() {
 </script>
 
 <style scoped>
+.search-panel {
+  position: fixed;
+  top: 60px;
+  right: 20px;
+  z-index: 9999;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 12px;
+  min-width: 360px;
+  max-width: 90vw;
+}
+
+.search-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.search-panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.search-panel-close {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.search-panel-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
 .search-row {
   display: flex;
   align-items: center;
@@ -466,5 +521,9 @@ function replaceAll() {
 
 :root[data-theme='dark'] .icon-btn:hover {
   border-color: var(--bg-selected);
+}
+
+:root[data-theme='dark'] .search-panel {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 </style>

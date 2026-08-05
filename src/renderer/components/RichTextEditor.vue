@@ -760,7 +760,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onBeforeUnmount, onMounted, computed } from 'vue'
+import { ref, watch, onBeforeUnmount, onMounted, onActivated, onDeactivated, computed } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import { Extension, getMarkRange } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
@@ -1032,14 +1032,28 @@ onMounted(async () => {
 
   // 加载已安装的字体列表
   await loadFonts()
+})
 
-  // 添加全局点击事件监听，关闭下拉菜单
+// keep-alive 激活时：注册全局事件监听（首次挂载后也会触发一次）
+onActivated(() => {
   document.addEventListener('click', handleGlobalClick)
-  // 添加键盘快捷键监听
   document.addEventListener('keydown', handleKeyDown)
-  // 添加 Ctrl 键状态监听
   document.addEventListener('keydown', handleCtrlKeyDown)
   document.addEventListener('keyup', handleCtrlKeyUp)
+  const sc = rootRef.value?.querySelector('.editor-content')
+  if (sc) sc.addEventListener('scroll', scheduleEye, { passive: true })
+  window.addEventListener('resize', scheduleEye)
+})
+
+// keep-alive 停用时：移除全局事件监听，避免在其他编辑器时误触发
+onDeactivated(() => {
+  document.removeEventListener('click', handleGlobalClick)
+  document.removeEventListener('keydown', handleKeyDown)
+  document.removeEventListener('keydown', handleCtrlKeyDown)
+  document.removeEventListener('keyup', handleCtrlKeyUp)
+  const sc = rootRef.value?.querySelector('.editor-content')
+  if (sc) sc.removeEventListener('scroll', scheduleEye)
+  window.removeEventListener('resize', scheduleEye)
 })
 
 function handleKeyDown(event: KeyboardEvent) {
@@ -2074,12 +2088,6 @@ function clearSecretUI() {
   editor.value?.commands.hideSecret()
   if (eye.value.visible) eye.value = { visible: false, x: 0, y: 0, revealed: false, range: null }
 }
-
-onMounted(() => {
-  const sc = rootRef.value?.querySelector('.editor-content')
-  if (sc) sc.addEventListener('scroll', scheduleEye, { passive: true })
-  window.addEventListener('resize', scheduleEye)
-})
 
 onBeforeUnmount(() => {
   if (debounceTimer) clearTimeout(debounceTimer)
