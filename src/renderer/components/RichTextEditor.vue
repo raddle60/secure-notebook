@@ -451,7 +451,7 @@
           </svg>
         </button>
         <button
-          @click="editor.chain().focus().toggleCodeBlock().run()"
+          @click="toggleCodeBlockMerged"
           :class="{ active: editor.isActive('codeBlock') }"
           title="代码块"
         >
@@ -766,6 +766,7 @@ import { Extension, getMarkRange } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import StarterKit from '@tiptap/starter-kit'
+import { CodeBlock as BaseCodeBlock } from '@tiptap/extension-code-block'
 import Placeholder from '@tiptap/extension-placeholder'
 import CharacterCount from '@tiptap/extension-character-count'
 import Underline from '@tiptap/extension-underline'
@@ -910,6 +911,12 @@ const LineHeight = Extension.create({
       },
     }
   },
+})
+
+// 扩展 CodeBlock 以允许 secret mark（默认 marks: '' 不允许任何 mark）
+const CodeBlockWithSecret = BaseCodeBlock.extend({
+  // 只允许 secret mark，其他 mark（bold/italic 等）仍然不允许
+  marks: 'secret',
 })
 
 const props = defineProps<{ content: string; noteId?: string | null }>()
@@ -1207,6 +1214,86 @@ function decreaseLineHeight() {
   editor.value.chain().focus().decreaseLineHeight().run()
 }
 
+// 自定义代码块切换：多选时合并成一个代码块，保留硬换行和 marks（如密文）
+function toggleCodeBlockMerged() {
+  const ed = editor.value
+  if (!ed) return
+
+  // 如果当前在代码块内，取消代码块（逐段转回段落）
+  if (ed.isActive('codeBlock')) {
+    ed.chain().focus().toggleCodeBlock().run()
+    return
+  }
+
+  const { from, to } = ed.state.selection
+  const state = ed.state
+
+  // 没有选区（纯光标），直接用默认行为（当前段落 ↔ 代码块）
+  if (from === to) {
+    ed.chain().focus().toggleCodeBlock().run()
+    return
+  }
+
+  // 收集选区内容，保留硬换行和 marks
+  const fragments: any[] = []
+  const processedTextblocks = new Set<number>()
+
+  state.doc.nodesBetween(from, to, (node, pos) => {
+    if (node.isTextblock && !processedTextblocks.has(pos)) {
+      processedTextblocks.add(pos)
+
+      // 不同 textblock 之间用换行分隔
+      if (fragments.length > 0) {
+        fragments.push(ed.schema.text('\n'))
+      }
+
+      // 遍历 textblock 内的子节点，保留 marks 和硬换行
+      node.content.forEach((child, offset) => {
+        const childFrom = pos + 1 + offset
+        const childTo = childFrom + child.nodeSize
+
+        // 计算与选区的交集
+        const start = Math.max(from, childFrom)
+        const end = Math.min(to, childTo)
+
+        if (start < end) {
+          if (child.isText) {
+            // 提取选区内的文本部分
+            const textStart = start - childFrom
+            const textEnd = end - childFrom
+            const text = child.text!.slice(textStart, textEnd)
+
+            if (text) {
+              // 保留 marks（如密文标记）
+              const textNode = child.marks.length > 0
+                ? ed.schema.text(text, child.marks)
+                : ed.schema.text(text)
+              fragments.push(textNode)
+            }
+          } else if (child.type.name === 'hardBreak') {
+            // 硬换行转为 \n
+            fragments.push(ed.schema.text('\n'))
+          }
+        }
+      })
+    }
+  })
+
+  if (fragments.length === 0) {
+    ed.chain().focus().toggleCodeBlock().run()
+    return
+  }
+
+  // 创建代码块，内容包含保留的 marks 和换行
+  const codeBlock = ed.schema.nodes.codeBlock.create(null, fragments)
+
+  const tr = state.tr
+  tr.delete(from, to)
+  tr.insert(from, codeBlock)
+  ed.view.dispatch(tr)
+  ed.view.focus()
+}
+
 // 计算属性 - 获取当前选中的字体标签
 const getFontFamilyLabel = computed(() => {
   if (!editor.value) return '默认字体'
@@ -1283,7 +1370,9 @@ const editor = useEditor({
     StarterKit.configure({
       link: false, // 必须关掉自带的，用你自己配置的
       underline: false, // 使用单独的 Underline 扩展
+      codeBlock: false, // 关掉自带的，用支持 secret mark 的 CodeBlockWithSecret
     }),
+    CodeBlockWithSecret,
     Placeholder.configure({
       placeholder: '开始输入内容...'
     }),
