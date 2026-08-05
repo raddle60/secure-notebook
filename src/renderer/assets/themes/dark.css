@@ -67,16 +67,15 @@
   /* 对话框遮罩 */
   --overlay-bg: rgba(0, 0, 0, 0.7);
 
-  /* Milkdown 预览块级元素颜色 - 不同色相区分 */
-  --milkdown-heading-color: #6db3f2;      /* 标题 - 天蓝色 */
-  --milkdown-paragraph-color: #c9d1d9;    /* 段落 - 灰白色（默认） */
-  --milkdown-blockquote-color: #bd93f9;   /* 引用 - 紫色 */
-  --milkdown-list-color: #c49a3c;          /* 列表 - 棕黄色 */
-  --milkdown-task-color: #8be9fd;         /* 任务列表 - 青色 */
-  --milkdown-code-color: #ffb86c;         /* 行内代码 - 橙色 */
-  --milkdown-codeblock-color: #f1fa8c;    /* 代码块 - 黄色 */
-  --milkdown-table-color: #ff79c6;        /* 表格单元格 - 粉色 */
-  --milkdown-table-header-color: #ff9999; /* 表格标题 - 浅粉 */
-  --milkdown-hr-color: #6272a4;           /* 分割线 - 灰蓝 */
-  --milkdown-hr-color: #6272a4;           /* 分割线 - 灰蓝色 */
+  /* Milkdown 预览块级元素颜色 - 绿 4 / 蓝 4 均匀分布，标题颜色保持不变 */
+  --milkdown-heading-color: #e8a05a;        /* 标题 - 琥珀（保持不变） */
+  --milkdown-paragraph-color: var(--text-primary);  /* 段落 - 跟随文本编辑器默认文本色 */
+  --milkdown-blockquote-color: #9bbf6c;     /* 引用 - 嫩芽绿 */
+  --milkdown-list-color: #8ea5d0;           /* 列表 - 雾蓝 */
+  --milkdown-task-color: #b8d178;           /* 任务列表 - 抹茶绿 */
+  --milkdown-code-color: #a8c8e0;           /* 行内代码 - 淡蓝 */
+  --milkdown-codeblock-color: #8faf5a;      /* 代码块 - 草绿 */
+  --milkdown-table-color: #93b8d0;          /* 表格单元格 - 天蓝 */
+  --milkdown-table-header-color: #88a955;   /* 表格标题 - 橄榄绿 */
+  --milkdown-hr-color: #7a8a9a;             /* 分割线 - 淡蓝灰 */
 }

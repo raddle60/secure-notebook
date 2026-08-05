@@ -1567,26 +1567,26 @@ watch(() => props.content, (newContent) => {
 
 /* 亮色主题下的任务列表 */
 :root[data-theme='light'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"][data-checked="true"])::before {
-  background: #2da44e;
-  border-color: #2da44e;
+  background: #6a8e3d;
+  border-color: #6a8e3d;
 }
 
-/* 暗色主题下的任务列表 - 使用更柔和的绿色 */
-.milkdown-wrapper :deep(.milkdown li[data-item-type="task"][data-checked="true"])::before {
-  background: #238636;
-  border-color: #238636;
+/* 暗色主题下的任务列表 - 使用比背景更深的橄榄绿，确保勾选图标可读 */
+:root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"][data-checked="true"])::before {
+  background: #6b8e3d;
+  border-color: #6b8e3d;
 }
 
 /* 已完成任务文字颜色 - 亮色主题 */
 :root[data-theme='light'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"][data-checked="true"]),
 :root[data-theme='light'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"][data-checked="true"] p) {
-  color: #007a33 !important;
+  color: #4a6633 !important;
 }
 
 /* 已完成任务文字颜色 - 暗色主题 */
 :root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"][data-checked="true"]),
 :root[data-theme='dark'] .milkdown-wrapper :deep(.milkdown li[data-item-type="task"][data-checked="true"] p) {
-  color: #237233 !important;
+  color: #88a955 !important;
 }
 
 /* Mermaid 图表样式 */
