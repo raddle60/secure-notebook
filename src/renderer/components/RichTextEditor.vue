@@ -1445,6 +1445,20 @@ const editor = useEditor({
     attributes: {
       class: 'rich-text-editor',
       spellcheck: 'false'
+    },
+    // 自定义剪贴板纯文本序列化：
+    // ProseMirror 默认用 \n\n 做段落分隔，粘贴到纯文本编辑器会产生大量空行；
+    // 改为 \n 分隔，同时补上 hardBreak（Shift+Enter）的换行，否则默认会丢失。
+    clipboardTextSerializer: (slice) => {
+      return slice.content.textBetween(
+        0,
+        slice.content.size,
+        '\n',
+        (node: any) => {
+          if (node.type.name === 'hardBreak') return '\n'
+          return ''
+        }
+      )
     }
   },
   onUpdate: ({ editor }) => {
