@@ -182,13 +182,14 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
-import { Editor, rootCtx, defaultValueCtx, editorViewCtx, editorStateCtx } from '@milkdown/kit/core'
+import { Editor, rootCtx, defaultValueCtx, editorViewCtx, editorStateCtx, editorViewOptionsCtx, serializerCtx, schemaCtx } from '@milkdown/kit/core'
 import { commonmark } from '@milkdown/kit/preset/commonmark'
 import { gfm } from '@milkdown/kit/preset/gfm'
 import { clipboard } from '@milkdown/plugin-clipboard'
 import { diagram, mermaidConfigCtx } from '@milkdown/plugin-diagram'
 import { math, katexOptionsCtx } from '@milkdown/plugin-math'
 import { parserCtx } from '@milkdown/core'
+import { DOMSerializer, type Node as PMNode } from 'prosemirror-model'
 import 'katex/dist/katex.min.css'
 import mermaid from 'mermaid'
 import { EditorState, EditorSelection } from '@codemirror/state'
@@ -699,6 +700,42 @@ async function proxyImageUrl(url: string): Promise<string> {
   return url
 }
 
+// 将 ProseMirror 文档片段序列化为纯文本（用于剪贴板）
+// 表格：同一行的列用 \t 分隔，行间用 \n 分隔
+// 普通段落 / 标题：每个块一行
+// hardbreak：\n
+function sliceToPlainText(slice: { content: { size: number; forEach: (cb: (node: PMNode, offset: number, index: number) => void) => void; textBetween: (from: number, to: number, sep: string, leafText?: any) => string } }): string {
+  const lines: string[] = []
+
+  function walk(node: PMNode) {
+    if (!node.isBlock) return
+
+    if (node.type.name === 'table') {
+      // 表格：逐行，列之间 \t 分隔
+      node.content.forEach((row) => {
+        if (row.type.name !== 'table_row' && row.type.name !== 'table_header_row') return
+        const cells: string[] = []
+        row.content.forEach((cell) => {
+          // 取 cell 内所有文本，内部换行替换为空格
+          cells.push(cell.textBetween(0, cell.content.size, ' ', ' '))
+        })
+        if (cells.length > 0) lines.push(cells.join('\t'))
+      })
+    } else if (node.isTextblock) {
+      // 文本块：用 textBetween 正确还原 hardbreak → \n；代码块保留内部 \n
+      lines.push(node.textBetween(0, node.content.size, '', (leaf: any) =>
+        leaf.type.name === 'hardbreak' ? '\n' : ''
+      ))
+    } else {
+      // 列表、引用等其他块 → 递归子块
+      node.content.forEach((child) => walk(child as PMNode))
+    }
+  }
+
+  slice.content.forEach((node) => walk(node as PMNode))
+  return lines.join('\n')
+}
+
 // 初始化 Milkdown
 async function initMilkdown(content: string) {
   if (!previewRef.value) return
@@ -726,6 +763,11 @@ async function initMilkdown(content: string) {
         throwOnError: false,
         displayMode: false,
       })
+      // 自定义剪贴板纯文本序列化
+      ctx.update(editorViewOptionsCtx, (prev) => ({
+        ...prev,
+        clipboardTextSerializer: (slice: any) => sliceToPlainText(slice)
+      }))
     })
     .use(commonmark)
     .use(gfm)
@@ -741,6 +783,49 @@ async function initMilkdown(content: string) {
     const view = ctx.get(editorViewCtx)
     view.dom.setAttribute('contenteditable', 'false')
     view.dom.style.cursor = 'default'
+
+    // 自定义 copy 处理：contenteditable=false 时 ProseMirror 内部 selection
+    // 不会更新，handlers.copy 因 sel.empty 直接 return。因此用原生监听器
+    // 接管 copy，从 window.getSelection() 还原 ProseMirror 位置序列化。
+    view.dom.addEventListener('copy', (e: ClipboardEvent) => {
+      // 优先用 ProseMirror 内部 selection（正常情况）
+      let slice = view.state.selection.empty ? null : view.state.selection.content()
+
+      // contenteditable=false 导致 sel.empty，从 DOM selection 回退
+      if (!slice) {
+        const domSel = window.getSelection()
+        if (!domSel || domSel.rangeCount === 0) return
+
+        const range = domSel.getRangeAt(0)
+        // 确保选区在编辑器内
+        if (!view.dom.contains(range.startContainer) || !view.dom.contains(range.endContainer)) return
+
+        try {
+          const from = view.posAtDOM(range.startContainer, range.startOffset)
+          const to = view.posAtDOM(range.endContainer, range.endOffset)
+          if (from === to) return
+          slice = view.state.doc.slice(Math.min(from, to), Math.max(from, to))
+        } catch {
+          return // 无法转换，走浏览器默认
+        }
+      }
+
+      if (!slice || !slice.content.size) return
+
+      e.preventDefault()
+      e.clipboardData!.clearData()
+
+      // HTML 序列化
+      const serializer = DOMSerializer.fromSchema(view.state.schema)
+      const doc = document.implementation.createHTMLDocument()
+      const wrap = doc.createElement('div')
+      wrap.appendChild(serializer.serializeFragment(slice.content, { document: doc }))
+      e.clipboardData!.setData('text/html', wrap.innerHTML)
+
+      // 纯文本序列化：表格列用 \t 分隔，段落用 \n 分隔，hardbreak → \n
+      const text = sliceToPlainText(slice)
+      e.clipboardData!.setData('text/plain', text)
+    })
   })
 
   // 渲染 mermaid 图表

@@ -1448,17 +1448,34 @@ const editor = useEditor({
     },
     // 自定义剪贴板纯文本序列化：
     // ProseMirror 默认用 \n\n 做段落分隔，粘贴到纯文本编辑器会产生大量空行；
-    // 改为 \n 分隔，同时补上 hardBreak（Shift+Enter）的换行，否则默认会丢失。
+    // 改为 \n 分隔，表格同行列用 \t 分隔，同时补上 hardBreak 的换行。
     clipboardTextSerializer: (slice) => {
-      return slice.content.textBetween(
-        0,
-        slice.content.size,
-        '\n',
-        (node: any) => {
-          if (node.type.name === 'hardBreak') return '\n'
-          return ''
+      const lines: string[] = []
+
+      const walk = (node: any) => {
+        if (!node.isBlock) return
+
+        const name = node.type.name
+        if (name === 'table') {
+          node.content.forEach((row: any) => {
+            if (row.type.name !== 'tableRow') return
+            const cells: string[] = []
+            row.content.forEach((cell: any) => {
+              cells.push(cell.textBetween(0, cell.content.size, ' ', ' '))
+            })
+            if (cells.length > 0) lines.push(cells.join('\t'))
+          })
+        } else if (node.isTextblock) {
+          lines.push(node.textBetween(0, node.content.size, '', (leaf: any) =>
+            leaf.type.name === 'hardBreak' ? '\n' : ''
+          ))
+        } else {
+          node.content.forEach((child: any) => walk(child))
         }
-      )
+      }
+
+      slice.content.forEach((node: any) => walk(node))
+      return lines.join('\n')
     }
   },
   onUpdate: ({ editor }) => {
