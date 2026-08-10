@@ -2236,21 +2236,10 @@ onBeforeUnmount(() => {
   color: var(--text-primary);
 }
 
-:root[data-theme='dark'] .editor-content :deep(.ProseMirror p) {
-  color: var(--text-primary);
-}
-
-:root[data-theme='dark'] .editor-content :deep(.ProseMirror li) {
-  color: var(--text-primary);
-}
-
-:root[data-theme='dark'] .editor-content :deep(.ProseMirror strong) {
-  color: var(--text-primary);
-}
-
-:root[data-theme='dark'] .editor-content :deep(.ProseMirror em) {
-  color: var(--text-primary);
-}
+/* 注意：不要对 p / li / strong / em 等内联元素单独设置 color，
+   否则会破坏从父级继承的字体颜色（例如用户自定义的字体颜色在加粗后会丢失）。
+   .ProseMirror 已在上方统一设置了 color: var(--text-primary)，
+   所有子元素通过继承即可获得正确的文字颜色。 */
 
 .editor-content :deep(.ProseMirror p.is-editor-empty:first-child::before) {
   content: attr(data-placeholder);
