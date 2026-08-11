@@ -1446,6 +1446,19 @@ const editor = useEditor({
       class: 'rich-text-editor',
       spellcheck: 'false'
     },
+    // 回车键：光标在超链接上时，打开链接编辑框（不插入换行）
+    handleKeyDown: (view, event) => {
+      if (event.key === 'Enter' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+        const marks = view.state.selection.$from.marks()
+        if (marks.some(mark => mark.type.name === 'link')) {
+          event.preventDefault()
+          // 延迟打开，避免 keyup 事件被弹出的对话框输入框捕获
+          setTimeout(() => setLink(), 200)
+          return true
+        }
+      }
+      return false
+    },
     // 自定义剪贴板纯文本序列化：
     // ProseMirror 默认用 \n\n 做段落分隔，粘贴到纯文本编辑器会产生大量空行；
     // 改为 \n 分隔，表格同行列用 \t 分隔，同时补上 hardBreak 的换行。
