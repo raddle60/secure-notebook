@@ -15,6 +15,7 @@
           v-model="textValue"
           class="url-input"
           placeholder="请输入链接文本"
+          @keyup.enter="urlInputRef?.focus()"
         />
       </div>
       <div class="input-group">
